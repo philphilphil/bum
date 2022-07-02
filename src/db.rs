@@ -22,7 +22,7 @@ pub fn create_test_bookings() -> Result<()> {
 
 pub fn get_bookings() -> Vec<BookEntry> {
     let b: Vec<BookEntry> = serde_json::from_reader(&File::open("data.json").unwrap()).unwrap();
-    println!("{:?}", b);
+    // println!("{:?}", b);
     b
 }
 

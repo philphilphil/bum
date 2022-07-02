@@ -6,12 +6,14 @@ use crossterm::{
 use std::{error::Error, io};
 use tui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Span, Spans},
-    widgets::{Block, Borders, Cell, Row, Table, Tabs},
+    widgets::{Block, BorderType, Borders, Cell, ListItem, Paragraph, Row, Table, Tabs},
     Frame, Terminal,
 };
+
+use crate::db;
 
 struct App<'a> {
     pub titles: Vec<&'a str>,
@@ -86,97 +88,132 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
     let size = f.size();
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .margin(0)
-        .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
+        .margin(2)
+        .constraints(
+            [
+                Constraint::Length(3),
+                Constraint::Min(2),
+                Constraint::Length(3),
+            ]
+            .as_ref(),
+        )
         .split(size);
 
-    let inner_chunk = Layout::default()
-        .direction(Direction::Vertical)
-        .margin(0)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
-        .split(size);
+    // bottom
+    let budget_overview = Paragraph::new("Budget left: 321,32 €")
+        .style(Style::default().fg(Color::LightCyan))
+        .alignment(Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(Style::default().fg(Color::White))
+                .title("Overview")
+                .border_type(BorderType::Plain),
+        );
 
-    let block = Block::default().style(Style::default().bg(Color::Black).fg(Color::White));
-    f.render_widget(block, size);
+    f.render_widget(budget_overview, chunks[2]);
 
-    let titles = app
+    // Tabs
+    let menu = app
         .titles
         .iter()
         .map(|t| {
             let (first, rest) = t.split_at(1);
             Spans::from(vec![
-                Span::styled(first, Style::default().fg(Color::Yellow)),
-                Span::styled(rest, Style::default().fg(Color::Green)),
+                Span::styled(
+                    first,
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::UNDERLINED),
+                ),
+                Span::styled(rest, Style::default().fg(Color::White)),
             ])
         })
         .collect();
 
-    let tabs = Tabs::new(titles)
-        .block(Block::default().borders(Borders::ALL).title("Tabs"))
+    let tabs = Tabs::new(menu)
         .select(app.index)
-        .style(Style::default().fg(Color::Cyan))
-        .highlight_style(
-            Style::default()
-                .add_modifier(Modifier::BOLD)
-                .bg(Color::Black),
-        );
+        .block(Block::default().title("Menu").borders(Borders::ALL))
+        .style(Style::default().fg(Color::White))
+        .highlight_style(Style::default().fg(Color::Yellow))
+        .divider(Span::raw("|"));
 
     f.render_widget(tabs, chunks[0]);
 
-    let table = Table::new(vec![
-        // Row can be created from simple strings.
-        Row::new(vec!["Row11", "Row12", "Row13"]),
-        // You can style the entire row.
-        Row::new(vec!["Row21", "Row22", "Row23"]).style(Style::default().fg(Color::Blue)),
-        // If you need more control over the styling you may need to create Cells directly
-        Row::new(vec![
-            Cell::from("Row31"),
-            Cell::from("Row32").style(Style::default().fg(Color::Yellow)),
-            Cell::from(Spans::from(vec![
-                Span::raw("Row"),
-                Span::styled("33", Style::default().fg(Color::Green)),
-            ])),
-        ]),
-        // If a Row need to display some content over multiple lines, you just have to change
-        // its height.
-        Row::new(vec![
-            Cell::from("Row\n41"),
-            Cell::from("Row\n42"),
-            Cell::from("Row\n43"),
+    // content
+    match app.index {
+        0 => f.render_widget(render_home(), chunks[1]),
+        1 => {
+            let budget_chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(
+                    [
+                        Constraint::Percentage(33),
+                        Constraint::Percentage(33),
+                        Constraint::Percentage(33),
+                    ]
+                    .as_ref(),
+                )
+                .split(chunks[1]);
+            let table = render_budget();
+            f.render_widget(table, budget_chunks[1]);
+        }
+        _ => {}
+    }
+}
+
+fn render_home<'a>() -> Paragraph<'a> {
+    let home = Paragraph::new(vec![
+        Spans::from(vec![Span::raw("")]),
+        Spans::from(vec![Span::raw("Welcome")]),
+        Spans::from(vec![Span::raw("")]),
+        Spans::from(vec![Span::raw("to")]),
+        Spans::from(vec![Span::raw("")]),
+        Spans::from(vec![Span::styled(
+            "bum",
+            Style::default().fg(Color::LightBlue),
+        )]),
+        Spans::from(vec![Span::raw("")]),
+        Spans::from(vec![Span::raw("some instructions")]),
+    ])
+    .alignment(Alignment::Center)
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .style(Style::default().fg(Color::White))
+            .title("Home")
+            .border_type(BorderType::Plain),
+    );
+    home
+}
+
+fn render_budget<'a>() -> Table<'a> {
+    let items: Vec<_> = db::get_bookings()
+        .iter()
+        .map(|b| {
+            Row::new(vec![
+                Cell::from(b.name.to_string()),
+                Cell::from(b.amount.to_string()),
+                Cell::from(b.date.to_string()),
+            ])
+        })
+        .collect();
+    let t = Table::new(items)
+        .style(Style::default().fg(Color::White))
+        .header(Row::new(vec!["Name", "Amount", "Date"]).style(Style::default().fg(Color::Yellow)))
+        .widths(&[
+            Constraint::Length(10),
+            Constraint::Length(10),
+            Constraint::Length(10),
         ])
-        .height(2),
-    ])
-    // You can set the style of the entire Table.
-    .style(Style::default().fg(Color::White))
-    // It has an optional header, which is simply a Row always visible at the top.
-    .header(
-        Row::new(vec!["Col1", "Col2", "Col3"])
-            .style(Style::default().fg(Color::Yellow))
-            // If you want some space between the header and the rest of the rows, you can always
-            // specify some margin at the bottom.
-            .bottom_margin(1),
-    )
-    // As any other widget, a Table can be wrapped in a Block.
-    .block(Block::default().title("Table"))
-    // Columns widths are constrained in the same way as Layout...
-    .widths(&[
-        Constraint::Length(5),
-        Constraint::Length(5),
-        Constraint::Length(10),
-    ])
-    // ...and they can be separated by a fixed spacing.
-    .column_spacing(1)
-    // If you wish to highlight a row in any specific way when it is selected...
-    .highlight_style(Style::default().add_modifier(Modifier::BOLD))
-    // ...and potentially show a symbol in front of the selection.
-    .highlight_symbol(">>");
-    let inner = match app.index {
-        0 => Block::default().title("Inner 0").borders(Borders::ALL),
-        1 => Block::default().title("Inner 1").borders(Borders::ALL),
-        2 => Block::default().title("Inner 2").borders(Borders::ALL),
-        3 => Block::default().title("Inner 3").borders(Borders::ALL),
-        _ => unreachable!(),
-    };
-    f.render_widget(inner, chunks[1]);
-    // f.render_widget(table, inner_chunk[1]);
+        .column_spacing(5)
+        .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+        .highlight_symbol(">>")
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Entries")
+                .border_type(BorderType::Plain),
+        );
+    t
 }
