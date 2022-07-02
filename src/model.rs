@@ -1,21 +1,22 @@
+use chrono::serde::ts_seconds;
 use chrono::DateTime;
 use chrono::{serde::ts_seconds::serialize as to_ts, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Debug, Deserialize)]
 pub enum EntryType {
     #[default]
     Income,
     Expense,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Debug, Deserialize)]
 pub struct BookEntry {
     pub name: String,
     pub kind: EntryType,
     pub category_id: u8,
     pub amount: f32,
-    #[serde(serialize_with = "to_ts")]
+    #[serde(with = "ts_seconds")]
     pub date: DateTime<Utc>,
 }
 
@@ -29,6 +30,24 @@ pub struct RecurringEntry {
     pub next_payment_date: DateTime<Utc>,
     #[serde(serialize_with = "to_ts")]
     pub cancelation_period: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Category {
+    pub id: u8,
+    pub name: String,
+}
+
+impl BookEntry {
+    pub fn new(name: &str, kind: EntryType, category_id: u8, amount: f32) -> Self {
+        Self {
+            name: name.to_string(),
+            kind,
+            category_id,
+            amount,
+            date: chrono::offset::Utc::now(),
+        }
+    }
 }
 
 // #[derive(Serialize, Deserialize)]

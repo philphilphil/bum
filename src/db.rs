@@ -1,32 +1,15 @@
 use serde_json::Result;
 use std::fs::File;
 
-use crate::model::BookEntry;
+use crate::model::{BookEntry, EntryType};
 
-pub fn try_db() -> Result<()> {
-    let exp = BookEntry {
-        name: "brot".to_string(),
-        category_id: 1,
-        amount: 12.23,
-        date: chrono::offset::Utc::now(),
-    };
-    let exp2 = BookEntry {
-        name: "22 brot".to_string(),
-        category_id: 1,
-        amount: 12.23,
-        date: chrono::offset::Utc::now(),
-    };
-
-    let exp3 = BookEntry {
-        name: "3333 brot".to_string(),
-        category_id: 1,
-        amount: 12.23,
-        date: chrono::offset::Utc::now(),
-    };
-
+pub fn create_test_bookings() -> Result<()> {
+    let exp = BookEntry::new("eins", EntryType::Income, 5, 13.22);
+    let exp2 = BookEntry::new("zwei", EntryType::Income, 3, 983.22);
+    let exp3 = BookEntry::new("drei", EntryType::Income, 3, 1.22);
     let v = vec![exp, exp2, exp3];
 
-    let j = serde_json::to_writer(&File::create("data.json").unwrap(), &v)?;
+    let j = serde_json::to_writer_pretty(&File::create("data.json").unwrap(), &v)?;
     // println!("{}", j);
 
     // let p: Expense = serde_json::from_str(data)?;
@@ -36,3 +19,20 @@ pub fn try_db() -> Result<()> {
 
     Ok(())
 }
+
+pub fn get_bookings() -> Vec<BookEntry> {
+    let b: Vec<BookEntry> = serde_json::from_reader(&File::open("data.json").unwrap()).unwrap();
+    println!("{:?}", b);
+    b
+}
+
+pub fn add_booking(booking: BookEntry) -> Result<()> {
+    let mut b: Vec<BookEntry> = serde_json::from_reader(&File::open("data.json").unwrap()).unwrap();
+    b.push(booking);
+    serde_json::to_writer_pretty(&File::create("data.json").unwrap(), &b)?;
+    Ok(())
+}
+
+//Todo:
+// ensure files are created
+// ...
