@@ -6,10 +6,10 @@ use crossterm::{
 use std::{error::Error, io};
 use tui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Alignment, Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans},
-    widgets::{Block, BorderType, Borders, Cell, ListItem, Paragraph, Row, Table, Tabs},
+    widgets::{Block, BorderType, Borders, Cell, Clear, Paragraph, Row, Table, Tabs},
     Frame, Terminal,
 };
 
@@ -78,6 +78,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                 KeyCode::Char('q') => return Ok(()),
                 KeyCode::Right => app.next(),
                 KeyCode::Left => app.previous(),
+                KeyCode::Char('p') => app.index = 0,
+                KeyCode::Char('b') => app.index = 1,
+                KeyCode::Char('s') => app.index = 2,
                 _ => {}
             }
         }
@@ -146,17 +149,18 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
         1 => {
             let budget_chunks = Layout::default()
                 .direction(Direction::Horizontal)
-                .constraints(
-                    [
-                        Constraint::Percentage(33),
-                        Constraint::Percentage(33),
-                        Constraint::Percentage(33),
-                    ]
-                    .as_ref(),
-                )
+                .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
                 .split(chunks[1]);
             let table = render_budget();
+            let table2 = render_budget();
+
             f.render_widget(table, budget_chunks[1]);
+            f.render_widget(table2, budget_chunks[0]);
+
+            let block = Block::default().title("Popup").borders(Borders::ALL);
+            let area = centered_rect(60, 20, size);
+            f.render_widget(Clear, area); //this clears out the background
+            f.render_widget(block, area);
         }
         _ => {}
     }
@@ -188,20 +192,26 @@ fn render_home<'a>() -> Paragraph<'a> {
 }
 
 fn render_budget<'a>() -> Table<'a> {
+    // active
     let items: Vec<_> = db::get_bookings()
         .iter()
         .map(|b| {
             Row::new(vec![
                 Cell::from(b.name.to_string()),
-                Cell::from(b.amount.to_string()),
+                Cell::from(format!("{} €", b.amount)),
+                Cell::from("cattbd"),
                 Cell::from(b.date.to_string()),
             ])
         })
         .collect();
     let t = Table::new(items)
         .style(Style::default().fg(Color::White))
-        .header(Row::new(vec!["Name", "Amount", "Date"]).style(Style::default().fg(Color::Yellow)))
+        .header(
+            Row::new(vec!["Name", "Amount", "Category", "Date"])
+                .style(Style::default().fg(Color::Yellow)),
+        )
         .widths(&[
+            Constraint::Length(10),
             Constraint::Length(10),
             Constraint::Length(10),
             Constraint::Length(10),
@@ -216,4 +226,31 @@ fn render_budget<'a>() -> Table<'a> {
                 .border_type(BorderType::Plain),
         );
     t
+}
+
+/// helper function to create a centered rect using up certain percentage of the available rect `r`
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Percentage((100 - percent_y) / 2),
+                Constraint::Percentage(percent_y),
+                Constraint::Percentage((100 - percent_y) / 2),
+            ]
+            .as_ref(),
+        )
+        .split(r);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(
+            [
+                Constraint::Percentage((100 - percent_x) / 2),
+                Constraint::Percentage(percent_x),
+                Constraint::Percentage((100 - percent_x) / 2),
+            ]
+            .as_ref(),
+        )
+        .split(popup_layout[1])[1]
 }
