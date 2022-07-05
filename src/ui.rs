@@ -4,20 +4,30 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::{error::Error, io};
+use tui::layout::Layout;
 use tui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction},
     style::{Color, Modifier, Style},
     text::{Span, Spans},
-    widgets::{Block, BorderType, Borders, Cell, Clear, Paragraph, Row, Table, Tabs},
+    widgets::{Block, BorderType, Borders, Cell, Paragraph, Row, Table, Tabs},
     Frame, Terminal,
 };
 
-use crate::db;
+use crate::{commands, db};
+
+#[derive(Default)]
+enum UIMode {
+    #[default]
+    Normal,
+    Command,
+}
 
 struct App<'a> {
     pub titles: Vec<&'a str>,
     pub index: usize,
+    pub mode: UIMode,
+    input: String,
 }
 
 impl<'a> App<'a> {
@@ -25,6 +35,8 @@ impl<'a> App<'a> {
         App {
             titles: vec!["Planning", "Budget", "Settings"],
             index: 0,
+            mode: UIMode::default(),
+            input: String::new(),
         }
     }
 
@@ -74,14 +86,33 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
         terminal.draw(|f| ui(f, &app))?;
 
         if let Event::Key(key) = event::read()? {
-            match key.code {
-                KeyCode::Char('q') => return Ok(()),
-                KeyCode::Right => app.next(),
-                KeyCode::Left => app.previous(),
-                KeyCode::Char('p') => app.index = 0,
-                KeyCode::Char('b') => app.index = 1,
-                KeyCode::Char('s') => app.index = 2,
-                _ => {}
+            match app.mode {
+                UIMode::Normal => match key.code {
+                    KeyCode::Char('q') => return Ok(()),
+                    KeyCode::Right => app.next(),
+                    KeyCode::Left => app.previous(),
+                    KeyCode::Char('p') => app.index = 0,
+                    KeyCode::Char('b') => app.index = 1,
+                    KeyCode::Char('s') => app.index = 2,
+                    KeyCode::Esc => app.mode = UIMode::Normal,
+                    KeyCode::Char(':') => app.mode = UIMode::Command,
+                    _ => {}
+                },
+                UIMode::Command => match key.code {
+                    KeyCode::Esc => app.mode = UIMode::Normal,
+                    KeyCode::Enter => {
+                        app.mode = UIMode::Normal;
+                        commands::handle_command(&app.input).unwrap();
+                        app.input = String::new();
+                    }
+                    KeyCode::Char(c) => {
+                        app.input.push(c);
+                    }
+                    KeyCode::Backspace => {
+                        app.input.pop();
+                    }
+                    _ => {}
+                },
             }
         }
     }
@@ -91,7 +122,6 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
     let size = f.size();
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .margin(2)
         .constraints(
             [
                 Constraint::Length(3),
@@ -110,11 +140,26 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
             Block::default()
                 .borders(Borders::ALL)
                 .style(Style::default().fg(Color::White))
-                .title("Overview")
+                .title(" Overview / Command ")
                 .border_type(BorderType::Plain),
         );
 
-    f.render_widget(budget_overview, chunks[2]);
+    let input = Paragraph::new(app.input.as_ref())
+        .style(match app.mode {
+            UIMode::Normal => Style::default(),
+            UIMode::Command => Style::default().fg(Color::Yellow),
+        })
+        .block(Block::default().borders(Borders::ALL).title(" Command "));
+
+    match app.mode {
+        UIMode::Normal => {
+            f.render_widget(budget_overview, chunks[2]);
+        }
+        UIMode::Command => {
+            f.set_cursor(chunks[2].x + app.input.len() as u16 + 1, chunks[2].y + 1);
+            f.render_widget(input, chunks[2]);
+        }
+    }
 
     // Tabs
     let menu = app
@@ -136,7 +181,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
 
     let tabs = Tabs::new(menu)
         .select(app.index)
-        .block(Block::default().title("Menu").borders(Borders::ALL))
+        .block(Block::default().title(" Menu ").borders(Borders::ALL))
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().fg(Color::Yellow))
         .divider(Span::raw("|"));
@@ -156,11 +201,6 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
 
             f.render_widget(table, budget_chunks[1]);
             f.render_widget(table2, budget_chunks[0]);
-
-            let block = Block::default().title("Popup").borders(Borders::ALL);
-            let area = centered_rect(60, 20, size);
-            f.render_widget(Clear, area); //this clears out the background
-            f.render_widget(block, area);
         }
         _ => {}
     }
@@ -185,7 +225,7 @@ fn render_home<'a>() -> Paragraph<'a> {
         Block::default()
             .borders(Borders::ALL)
             .style(Style::default().fg(Color::White))
-            .title("Home")
+            .title(" Home ")
             .border_type(BorderType::Plain),
     );
     home
@@ -226,31 +266,4 @@ fn render_budget<'a>() -> Table<'a> {
                 .border_type(BorderType::Plain),
         );
     t
-}
-
-/// helper function to create a centered rect using up certain percentage of the available rect `r`
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(
-            [
-                Constraint::Percentage((100 - percent_y) / 2),
-                Constraint::Percentage(percent_y),
-                Constraint::Percentage((100 - percent_y) / 2),
-            ]
-            .as_ref(),
-        )
-        .split(r);
-
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints(
-            [
-                Constraint::Percentage((100 - percent_x) / 2),
-                Constraint::Percentage(percent_x),
-                Constraint::Percentage((100 - percent_x) / 2),
-            ]
-            .as_ref(),
-        )
-        .split(popup_layout[1])[1]
 }
