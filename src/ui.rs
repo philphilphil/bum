@@ -1,9 +1,11 @@
+use anyhow::Result;
+use std::io;
+
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::{error::Error, io};
 use tui::layout::Layout;
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -23,16 +25,16 @@ enum UIMode {
     Command,
 }
 
-struct App<'a> {
+struct UserInterface<'a> {
     pub titles: Vec<&'a str>,
     pub index: usize,
     pub mode: UIMode,
     input: String,
 }
 
-impl<'a> App<'a> {
-    fn new() -> App<'a> {
-        App {
+impl<'a> UserInterface<'a> {
+    fn new() -> UserInterface<'a> {
+        UserInterface {
             titles: vec!["Planning", "Budget", "Settings"],
             index: 0,
             mode: UIMode::default(),
@@ -53,7 +55,7 @@ impl<'a> App<'a> {
     }
 }
 
-pub fn draw() -> Result<(), Box<dyn Error>> {
+pub fn draw() -> Result<()> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -61,9 +63,9 @@ pub fn draw() -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    // create app and run it
-    let app = App::new();
-    let res = run_app(&mut terminal, app);
+    // create ui and run it
+    let ui = UserInterface::new();
+    let res = run_ui(&mut terminal, ui);
 
     // restore terminal
     disable_raw_mode()?;
@@ -81,7 +83,7 @@ pub fn draw() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
+fn run_ui<B: Backend>(terminal: &mut Terminal<B>, mut app: UserInterface) -> io::Result<()> {
     loop {
         terminal.draw(|f| ui(f, &app))?;
 
@@ -96,6 +98,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                     KeyCode::Char('s') => app.index = 2,
                     KeyCode::Esc => app.mode = UIMode::Normal,
                     KeyCode::Char(':') => app.mode = UIMode::Command,
+                    KeyCode::Char('c') => app.mode = UIMode::Command,
                     _ => {}
                 },
                 UIMode::Command => match key.code {
@@ -118,7 +121,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
     }
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
+fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
     let size = f.size();
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -199,7 +202,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
             let table = render_budget();
             let table2 = render_budget();
 
-            f.render_widget(table, budget_chunks[1]);
+            // f.render_widget(table, budget_chunks[1]);
             f.render_widget(table2, budget_chunks[0]);
         }
         _ => {}
@@ -262,7 +265,7 @@ fn render_budget<'a>() -> Table<'a> {
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title("Entries")
+                .title(" Expeses ")
                 .border_type(BorderType::Plain),
         );
     t
