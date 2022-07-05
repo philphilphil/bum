@@ -2,7 +2,7 @@ use anyhow::*;
 
 use crate::{
     db,
-    model::{BookEntry, EntryType},
+    model::{BookEntry, Category, EntryType},
 };
 
 pub fn handle_command(cmd: &str) -> Result<()> {
@@ -18,6 +18,11 @@ pub fn handle_command(cmd: &str) -> Result<()> {
             );
             db::add_booking(exp)?;
         }
+        "addc" => {
+            let c = Category::new(action[1], action[2]);
+            db::add_category(c)?;
+        }
+
         _ => return Err(anyhow!("Invalid command.")),
     }
 

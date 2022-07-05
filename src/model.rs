@@ -20,6 +20,18 @@ pub struct BookEntry {
     pub date: DateTime<Utc>,
 }
 
+impl BookEntry {
+    pub fn new(name: &str, kind: EntryType, category_id: u8, amount: f32) -> Self {
+        Self {
+            name: name.to_string(),
+            kind,
+            category_id,
+            amount,
+            date: chrono::offset::Utc::now(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct RecurringEntry {
     pub name: String,
@@ -34,18 +46,15 @@ pub struct RecurringEntry {
 
 #[derive(Serialize, Deserialize)]
 pub struct Category {
-    pub id: u8,
+    pub token: String,
     pub name: String,
 }
 
-impl BookEntry {
-    pub fn new(name: &str, kind: EntryType, category_id: u8, amount: f32) -> Self {
-        Self {
+impl Category {
+    pub fn new(token: &str, name: &str) -> Self {
+        Category {
+            token: token.to_string(),
             name: name.to_string(),
-            kind,
-            category_id,
-            amount,
-            date: chrono::offset::Utc::now(),
         }
     }
 }

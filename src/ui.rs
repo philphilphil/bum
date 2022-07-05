@@ -199,11 +199,27 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
                 .direction(Direction::Horizontal)
                 .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
                 .split(chunks[1]);
-            let table = render_budget();
+            // let table = render_budget();
             let table2 = render_budget();
 
             // f.render_widget(table, budget_chunks[1]);
             f.render_widget(table2, budget_chunks[0]);
+        }
+        2 => {
+            let setting_chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(
+                    [
+                        Constraint::Percentage(25),
+                        Constraint::Percentage(25),
+                        Constraint::Percentage(25),
+                        Constraint::Percentage(25),
+                    ]
+                    .as_ref(),
+                )
+                .split(chunks[1]);
+            let table = render_settings();
+            f.render_widget(table, setting_chunks[0]);
         }
         _ => {}
     }
@@ -265,7 +281,34 @@ fn render_budget<'a>() -> Table<'a> {
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(" Expeses ")
+                .title(" Expenses ")
+                .border_type(BorderType::Plain),
+        );
+    t
+}
+
+fn render_settings<'a>() -> Table<'a> {
+    // active
+    let items: Vec<_> = db::get_categories()
+        .iter()
+        .map(|b| {
+            Row::new(vec![
+                Cell::from(b.token.to_string()),
+                Cell::from(b.name.to_string()),
+            ])
+        })
+        .collect();
+    let t = Table::new(items)
+        .style(Style::default().fg(Color::White))
+        .header(Row::new(vec!["Id", "Name"]).style(Style::default().fg(Color::Yellow)))
+        .widths(&[Constraint::Length(3), Constraint::Length(10)])
+        .column_spacing(5)
+        .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+        .highlight_symbol(">>")
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Categories ")
                 .border_type(BorderType::Plain),
         );
     t
