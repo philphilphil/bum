@@ -29,6 +29,7 @@ struct UserInterface<'a> {
     pub titles: Vec<&'a str>,
     pub index: usize,
     pub mode: UIMode,
+    pub error_message: String,
     input: String,
 }
 
@@ -39,6 +40,7 @@ impl<'a> UserInterface<'a> {
             index: 0,
             mode: UIMode::default(),
             input: String::new(),
+            error_message: String::new(),
         }
     }
 
@@ -96,16 +98,22 @@ fn run_ui<B: Backend>(terminal: &mut Terminal<B>, mut app: UserInterface) -> io:
                     KeyCode::Char('p') => app.index = 0,
                     KeyCode::Char('b') => app.index = 1,
                     KeyCode::Char('s') => app.index = 2,
-                    KeyCode::Esc => app.mode = UIMode::Normal,
                     KeyCode::Char(':') => app.mode = UIMode::Command,
                     KeyCode::Char('c') => app.mode = UIMode::Command,
                     _ => {}
                 },
                 UIMode::Command => match key.code {
-                    KeyCode::Esc => app.mode = UIMode::Normal,
+                    KeyCode::Esc => {
+                        app.mode = UIMode::Normal;
+                        app.input = String::new();
+                    }
+
                     KeyCode::Enter => {
                         app.mode = UIMode::Normal;
-                        commands::handle_command(&app.input).unwrap();
+                        match commands::handle_command(&app.input) {
+                            Ok(_) => {}
+                            Err(_) => app.error_message = "Invalid Command".to_string(),
+                        };
                         app.input = String::new();
                     }
                     KeyCode::Char(c) => {
@@ -136,7 +144,8 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
         .split(size);
 
     // bottom
-    let budget_overview = Paragraph::new("Budget left: 321,32 €")
+
+    let mut budget_overview = Paragraph::new("Budget left: 321,32 €")
         .style(Style::default().fg(Color::LightCyan))
         .alignment(Alignment::Center)
         .block(
@@ -146,6 +155,19 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
                 .title(" Overview / Command ")
                 .border_type(BorderType::Plain),
         );
+
+    if !app.error_message.is_empty() {
+        budget_overview = Paragraph::new(app.error_message.clone())
+            .style(Style::default().fg(Color::Red))
+            .alignment(Alignment::Left)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .style(Style::default().fg(Color::White))
+                    .title(" Overview / Command ")
+                    .border_type(BorderType::Plain),
+            );
+    }
 
     let input = Paragraph::new(app.input.as_ref())
         .style(match app.mode {
