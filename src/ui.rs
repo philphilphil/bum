@@ -6,7 +6,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use tui::layout::Layout;
+use tui::layout::{Layout, Rect};
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Alignment, Constraint, Direction},
@@ -16,7 +16,10 @@ use tui::{
     Frame, Terminal,
 };
 
-use crate::{commands, db};
+use crate::{
+    commands, db,
+    model::{EntryType, RecurringEntry, RecurringType},
+};
 
 #[derive(Default)]
 enum UIMode {
@@ -215,7 +218,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
 
     // content
     match app.index {
-        0 => f.render_widget(render_home(), chunks[1]),
+        0 => render_tab_planning(f, chunks[1]),
         1 => {
             let budget_chunks = Layout::default()
                 .direction(Direction::Horizontal)
@@ -247,29 +250,77 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
     }
 }
 
-fn render_home<'a>() -> Paragraph<'a> {
-    let home = Paragraph::new(vec![
-        Spans::from(vec![Span::raw("")]),
-        Spans::from(vec![Span::raw("Welcome")]),
-        Spans::from(vec![Span::raw("")]),
-        Spans::from(vec![Span::raw("to")]),
-        Spans::from(vec![Span::raw("")]),
-        Spans::from(vec![Span::styled(
-            "bum",
-            Style::default().fg(Color::LightBlue),
-        )]),
-        Spans::from(vec![Span::raw("")]),
-        Spans::from(vec![Span::raw("some instructions")]),
-    ])
-    .alignment(Alignment::Center)
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .style(Style::default().fg(Color::White))
-            .title(" Home ")
-            .border_type(BorderType::Plain),
+fn render_tab_planning<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(
+            [
+                Constraint::Percentage(25),
+                Constraint::Percentage(25),
+                Constraint::Percentage(25),
+                Constraint::Percentage(25),
+            ]
+            .as_ref(),
+        )
+        .split(chunk);
+
+    let mut rec_i = db::get_recurring().unwrap();
+    rec_i.retain(|r| r.kind == EntryType::Income);
+
+    let mut rec_m = db::get_recurring().unwrap();
+    rec_m.retain(|r| r.rate_type == RecurringType::Monthly);
+
+    let mut rec_y = db::get_recurring().unwrap();
+    rec_y.retain(|r| r.rate_type == RecurringType::Yearly);
+
+    f.render_widget(render_expense_table(rec_i, "Income".to_string()), chunks[0]);
+    f.render_widget(
+        render_expense_table(rec_m, "Montlhy".to_string()),
+        chunks[1],
     );
-    home
+    f.render_widget(render_expense_table(rec_y, "Yearly".to_string()), chunks[2]);
+}
+
+fn render_expense_table<'a>(items: Vec<RecurringEntry>, title: String) -> Table<'a> {
+    let sum: f32 = items.iter().map(|r| r.amount).sum();
+    let mut items: Vec<_> = items
+        .iter()
+        .map(|b| {
+            Row::new(vec![
+                Cell::from(b.name.to_string()),
+                Cell::from(b.category_token.to_string()),
+                Cell::from(format!("{} €", b.amount)),
+            ])
+        })
+        .collect();
+
+    items.push(Row::new(vec![Cell::default()]));
+    items.push(Row::new(vec![
+        Cell::from(" Sum ").style(Style::default().fg(Color::Cyan)),
+        Cell::default(),
+        Cell::from(format!("{} €", sum)).style(Style::default().fg(Color::Cyan)),
+    ]));
+
+    let t = Table::new(items)
+        .style(Style::default().fg(Color::White))
+        .header(
+            Row::new(vec!["Name", "Category", "Amount"]).style(Style::default().fg(Color::Yellow)),
+        )
+        .widths(&[
+            Constraint::Length(10),
+            Constraint::Length(10),
+            Constraint::Length(10),
+        ])
+        .column_spacing(5)
+        .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+        .highlight_symbol(">>")
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(format!(" {} ", title))
+                .border_type(BorderType::Plain),
+        );
+    t
 }
 
 fn render_budget<'a>() -> Table<'a> {
@@ -281,7 +332,7 @@ fn render_budget<'a>() -> Table<'a> {
             Row::new(vec![
                 Cell::from(b.name.to_string()),
                 Cell::from(format!("{} €", b.amount)),
-                Cell::from("cattbd"),
+                Cell::from(b.category_token.to_string()),
                 Cell::from(b.date.to_string()),
             ])
         })

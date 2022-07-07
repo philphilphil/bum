@@ -1,9 +1,9 @@
 use chrono::serde::ts_seconds;
 use chrono::DateTime;
-use chrono::{serde::ts_seconds::serialize as to_ts, Utc};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Serialize, Debug, Deserialize)]
+#[derive(Default, Serialize, Debug, Deserialize, PartialEq)]
 pub enum EntryType {
     #[default]
     Income,
@@ -14,34 +14,60 @@ pub enum EntryType {
 pub struct BookEntry {
     pub name: String,
     pub kind: EntryType,
-    pub category_id: u8,
+    pub category_token: String,
     pub amount: f32,
     #[serde(with = "ts_seconds")]
     pub date: DateTime<Utc>,
 }
 
 impl BookEntry {
-    pub fn new(name: &str, kind: EntryType, category_id: u8, amount: f32) -> Self {
+    pub fn new(name: &str, kind: EntryType, category_token: &str, amount: f32) -> Self {
         Self {
             name: name.to_string(),
             kind,
-            category_id,
+            category_token: category_token.to_string(),
             amount,
             date: chrono::offset::Utc::now(),
         }
     }
 }
 
+#[derive(Default, Serialize, Debug, Deserialize, PartialEq)]
+pub enum RecurringType {
+    #[default]
+    Monthly,
+    Yearly,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct RecurringEntry {
     pub name: String,
     pub kind: EntryType,
-    pub category_id: u8,
+    pub category_token: String,
     pub amount: f32,
-    #[serde(serialize_with = "to_ts")]
-    pub next_payment_date: DateTime<Utc>,
-    #[serde(serialize_with = "to_ts")]
-    pub cancelation_period: DateTime<Utc>,
+    pub rate_type: RecurringType,
+    // #[serde(serialize_with = "to_ts")]
+    // pub next_payment_date: DateTime<Utc>,
+    // #[serde(serialize_with = "to_ts")]
+    // pub cancelation_period: DateTime<Utc>,
+}
+
+impl RecurringEntry {
+    pub fn new(
+        name: &str,
+        kind: EntryType,
+        category_token: &str,
+        amount: f32,
+        rate_type: RecurringType,
+    ) -> Self {
+        Self {
+            name: name.to_string(),
+            kind,
+            category_token: category_token.to_string(),
+            amount,
+            rate_type,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
