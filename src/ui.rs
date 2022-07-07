@@ -275,6 +275,7 @@ fn render_home<'a>() -> Paragraph<'a> {
 fn render_budget<'a>() -> Table<'a> {
     // active
     let items: Vec<_> = db::get_bookings()
+        .unwrap()
         .iter()
         .map(|b| {
             Row::new(vec![
@@ -312,6 +313,7 @@ fn render_budget<'a>() -> Table<'a> {
 fn render_settings<'a>() -> Table<'a> {
     // active
     let items: Vec<_> = db::get_categories()
+        .unwrap()
         .iter()
         .map(|b| {
             Row::new(vec![

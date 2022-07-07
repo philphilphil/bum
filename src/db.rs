@@ -1,37 +1,55 @@
-use serde_json::Result;
-use std::{fs::File, path::Path};
+use anyhow::Result;
+use std::{
+    fs::{self, File},
+    path::Path,
+};
 
 use crate::model::{BookEntry, Category};
 
-pub fn get_bookings() -> Vec<BookEntry> {
-    let b: Vec<BookEntry> = serde_json::from_reader(&File::open("data.json").unwrap()).unwrap();
-    b
+// TODO: Add a default path and option to set a path to db files via cli arg
+const DB_BASEPATH: &str = "db/";
+const DB_FILE_CATEGORY: &str = "data_categories.json";
+// TODO: Split into active and archive bookings
+const DB_FILE_BOOKINGS: &str = "data_bookings.json";
+const DB_FILE_RECURRING: &str = "data_recurring.json";
+
+pub fn get_bookings() -> Result<Vec<BookEntry>> {
+    let b: Vec<BookEntry> =
+        serde_json::from_reader(&File::open(Path::new(DB_BASEPATH).join(DB_FILE_BOOKINGS))?)?;
+    Ok(b)
 }
 
 pub fn add_booking(booking: BookEntry) -> Result<()> {
-    let mut b: Vec<BookEntry> = serde_json::from_reader(&File::open("data.json").unwrap()).unwrap();
+    let book_path = Path::new(DB_BASEPATH).join(DB_FILE_BOOKINGS);
+    let mut b: Vec<BookEntry> = serde_json::from_reader(&File::open(&book_path)?)?;
     b.push(booking);
-    serde_json::to_writer_pretty(&File::create("data.json").unwrap(), &b)?;
+    serde_json::to_writer_pretty(&File::create(&book_path)?, &b)?;
     Ok(())
 }
 
-pub(crate) fn get_categories() -> Vec<Category> {
+pub(crate) fn get_categories() -> Result<Vec<Category>> {
     let c: Vec<Category> =
-        serde_json::from_reader(&File::open("data_categories.json").unwrap()).unwrap();
-    c
+        serde_json::from_reader(&File::open(Path::new(DB_BASEPATH).join(DB_FILE_CATEGORY))?)?;
+    Ok(c)
 }
 
 pub fn add_category(cat: Category) -> Result<()> {
-    let mut categories: Vec<Category> = Vec::new();
-
-    if Path::new("data_categories.json").exists() {
-        categories = serde_json::from_reader(&File::open("data_categories.json").unwrap()).unwrap();
-    }
-
+    let cat_path = Path::new(DB_BASEPATH).join(DB_FILE_CATEGORY);
+    let mut categories: Vec<Category> = serde_json::from_reader(&File::open(&cat_path)?)?;
     categories.push(cat);
-    serde_json::to_writer_pretty(&File::create("data_categories.json").unwrap(), &categories)?;
+    serde_json::to_writer_pretty(&File::create(&cat_path)?, &categories)?;
     Ok(())
 }
-//Todo:
-// ensure files are created
-// ...
+
+pub fn ensure_db_files_exist() -> Result<()> {
+    let cat_path = Path::new(DB_BASEPATH).join(DB_FILE_CATEGORY);
+    let book_path = Path::new(DB_BASEPATH).join(DB_FILE_BOOKINGS);
+    if !cat_path.exists() {
+        fs::write(cat_path, "[]")?;
+    }
+    if !book_path.exists() {
+        fs::write(book_path, "[]")?;
+    }
+
+    Ok(())
+}
