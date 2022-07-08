@@ -147,19 +147,18 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
         .split(size);
 
     // Bottom - Overview/Command
-    let bottom: Paragraph = get_bottom(app);
-    let input = Paragraph::new(app.command.as_ref())
-        .style(match app.mode {
-            UIMode::Normal => Style::default(),
-            UIMode::Command => Style::default().fg(Color::Yellow),
-        })
-        .block(Block::default().borders(Borders::ALL).title(" Command "));
-
     match app.mode {
         UIMode::Normal => {
+            let bottom: Paragraph = get_bottom(app);
             f.render_widget(bottom, chunks[2]);
         }
         UIMode::Command => {
+            let input = Paragraph::new(app.command.as_ref())
+                .style(match app.mode {
+                    UIMode::Normal => Style::default(),
+                    UIMode::Command => Style::default().fg(Color::Yellow),
+                })
+                .block(Block::default().borders(Borders::ALL).title(" Command "));
             f.set_cursor(chunks[2].x + app.command.len() as u16 + 1, chunks[2].y + 1);
             f.render_widget(input, chunks[2]);
         }
