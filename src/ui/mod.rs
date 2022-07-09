@@ -1,7 +1,3 @@
-use lazy_static::lazy_static;
-lazy_static! {
-    pub static ref CURRENCY_SYMBOL: String = db::get_setting_currency_symbol().unwrap();
-}
 mod budget;
 mod planning;
 mod settings;
@@ -14,6 +10,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use lazy_static::lazy_static;
 use tui::layout::Layout;
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -26,7 +23,11 @@ use tui::{
 
 use crate::commands;
 
-#[derive(Default)]
+lazy_static! {
+    pub static ref CURRENCY_SYMBOL: String = db::get_setting_currency_symbol().unwrap();
+}
+
+#[derive(Default, PartialEq)]
 enum UIMode {
     #[default]
     Normal,
@@ -139,13 +140,19 @@ fn run_ui<B: Backend>(terminal: &mut Terminal<B>, mut app: UserInterface) -> io:
 
 fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
     let size = f.size();
+
+    let mut cmd_box_size = 3;
+    if app.mode == UIMode::Command {
+        cmd_box_size = 4;
+    }
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
             [
                 Constraint::Length(3),
                 Constraint::Min(2),
-                Constraint::Length(3),
+                Constraint::Length(cmd_box_size),
             ]
             .as_ref(),
         )
@@ -158,7 +165,19 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
             f.render_widget(bottom, chunks[2]);
         }
         UIMode::Command => {
-            let input = Paragraph::new(app.command.as_ref())
+            let text = vec![
+                Spans::from(Span::styled(
+                    &app.command,
+                    Style::default().fg(Color::White),
+                )),
+                Spans::from(Span::styled(
+                    get_command_help_text(&app.command),
+                    Style::default()
+                        .add_modifier(Modifier::ITALIC)
+                        .fg(Color::LightBlue),
+                )),
+            ];
+            let input = Paragraph::new(text)
                 .style(match app.mode {
                     UIMode::Normal => Style::default(),
                     UIMode::Command => Style::default().fg(Color::Yellow),
@@ -179,6 +198,23 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
         1 => budget::render(f, chunks[1]),
         2 => settings::render(f, chunks[1]),
         _ => {}
+    }
+}
+
+fn get_command_help_text(app: &str) -> String {
+    // TODO: add help commands and long commands
+
+    if app.starts_with("are") {
+        "Add-Recurring-Expense Syntax: <Name> <Category-Token> <Amount> (<Yearly>)".to_string()
+    } else if app.starts_with("ari") {
+        "Add-Recurring-Income Syntax: <Name> <Category-Token> <Amount>".to_string()
+    } else if app.starts_with("ae") {
+        "Add-Expense Syntax: <Name> <Category-Token> <Amount>".to_string()
+    } else if app.starts_with("ac") {
+        "Add-Category Syntax: <Name> <Category-Token>".to_string()
+    } else {
+        "Commands: add-expense | add-recurring-expense | add-recurring-income | add-categorie"
+            .to_string()
     }
 }
 
@@ -212,7 +248,8 @@ fn get_tab_menu<'a>(app: &UserInterface<'a>) -> Tabs<'a> {
 
 fn get_bottom<'a>(app: &UserInterface) -> Paragraph<'a> {
     // FIXME: fix bad code
-    let mut bottom = Paragraph::new("Budget left: 321,32 ‚Ç¨")
+    // TODO: calc budget left
+    let mut bottom = Paragraph::new("Budget left: 321,32 ")
         .style(Style::default().fg(Color::LightCyan))
         .alignment(Alignment::Center)
         .block(

@@ -132,12 +132,18 @@ fn render_expense_table<'a>(items: &Vec<&RecurringEntry>, title: String) -> Tabl
     for b in items {
         let mut cells = vec![Cell::from(b.name.to_string())];
         if b.rate_type == RecurringType::Yearly {
-            cells.push(Cell::from(format!("{} {}", b.amount, *CURRENCY_SYMBOL)));
-            cells.push(Cell::from(format!("{} {}", b.amount, *CURRENCY_SYMBOL)));
+            cells.push(Cell::from(format!(
+                "{:.2} {}",
+                b.amount / 12.0,
+                *CURRENCY_SYMBOL
+            )));
+            cells.push(Cell::from(format!("{:.2} {}", b.amount, *CURRENCY_SYMBOL)));
+            cells.push(Cell::from(format!("{}", b.rate_type)));
         } else {
+            cells.push(Cell::from(format!("{:.2} {}", b.amount, *CURRENCY_SYMBOL)));
             cells.push(Cell::default());
+            cells.push(Cell::from("-".to_string()));
         }
-        cells.push(Cell::from(format!("{}", b.rate_type)));
 
         expenses.push(Row::new(cells));
     }
@@ -145,7 +151,8 @@ fn render_expense_table<'a>(items: &Vec<&RecurringEntry>, title: String) -> Tabl
     expenses.push(Row::new(vec![Cell::default()]));
     expenses.push(Row::new(vec![
         Cell::from(" Sum ").style(Style::default().fg(Color::Cyan)),
-        Cell::from(format!("{} {}", sum, *CURRENCY_SYMBOL)).style(Style::default().fg(Color::Cyan)),
+        Cell::from(format!("{:.2} {}", sum, *CURRENCY_SYMBOL))
+            .style(Style::default().fg(Color::Cyan)),
         Cell::default(),
     ]));
 
@@ -180,7 +187,7 @@ fn render_calc_table<'a>(items: Vec<RecurringEntry>) -> Table<'a> {
         .map(|b| {
             Row::new(vec![
                 Cell::from(b.name.to_string()),
-                Cell::from(format!("{} {}", b.amount, *CURRENCY_SYMBOL)),
+                Cell::from(format!("{:.2} {}", b.amount, *CURRENCY_SYMBOL)),
             ])
         })
         .collect();
