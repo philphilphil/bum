@@ -42,7 +42,7 @@ pub fn add_category(cat: Category) -> Result<()> {
 }
 
 pub(crate) fn get_recurring() -> Result<Vec<RecurringEntry>> {
-    let r: Vec<RecurringEntry> =
+    let mut r: Vec<RecurringEntry> =
         serde_json::from_reader(&File::open(Path::new(DB_BASEPATH).join(DB_FILE_RECURRING))?)?;
     Ok(r)
 }

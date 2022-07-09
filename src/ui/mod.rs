@@ -165,7 +165,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
     }
 
     // Tabs
-    let tabs: Tabs = get_tabs(app);
+    let tabs: Tabs = get_tab_menu(app);
     f.render_widget(tabs, chunks[0]);
 
     // Content
@@ -177,7 +177,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
     }
 }
 
-fn get_tabs<'a>(app: &UserInterface<'a>) -> Tabs<'a> {
+fn get_tab_menu<'a>(app: &UserInterface<'a>) -> Tabs<'a> {
     let menu = app
         .tabs
         .iter()
