@@ -1,6 +1,11 @@
+use lazy_static::lazy_static;
+lazy_static! {
+    pub static ref CURRENCY_SYMBOL: String = db::get_setting_currency_symbol().unwrap();
+}
 mod budget;
 mod planning;
 mod settings;
+use crate::db;
 use anyhow::Result;
 use std::io;
 

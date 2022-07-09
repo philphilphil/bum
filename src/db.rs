@@ -4,11 +4,12 @@ use std::{
     path::Path,
 };
 
-use crate::model::{BookEntry, Category, RecurringEntry};
+use crate::model::{BookEntry, Category, RecurringEntry, Setting};
 
 // TODO: Add a default path and option to set a path to db files via cli arg
 const DB_BASEPATH: &str = "db/";
 const DB_FILE_CATEGORY: &str = "data_categories.json";
+const DB_FILE_SETTINGS: &str = "settings.json";
 // TODO: Split into active and archive bookings
 const DB_FILE_BOOKINGS: &str = "data_bookings.json";
 const DB_FILE_RECURRING: &str = "data_recurring.json";
@@ -27,6 +28,31 @@ pub fn add_booking(booking: BookEntry) -> Result<()> {
     Ok(())
 }
 
+pub(crate) fn get_settings() -> Result<Vec<Setting>> {
+    let c: Vec<Setting> =
+        serde_json::from_reader(&File::open(Path::new(DB_BASEPATH).join(DB_FILE_SETTINGS))?)?;
+    Ok(c)
+}
+
+pub(crate) fn get_setting_currency_symbol() -> Result<String> {
+    let s: Vec<Setting> =
+        serde_json::from_reader(&File::open(Path::new(DB_BASEPATH).join(DB_FILE_SETTINGS))?)?;
+    let symbol: String = s
+        .iter()
+        .filter(|s| s.key == "Currency_Symbol")
+        .map(|s| s.value.clone())
+        .collect::<String>();
+    Ok(symbol)
+}
+
+// pub fn add_setting(setting: Setting) -> Result<()> {
+//     let set_path = Path::new(DB_BASEPATH).join(DB_FILE_SETTINGS);
+//     let mut settings: Vec<Setting> = serde_json::from_reader(&File::open(&set_path)?)?;
+//     settings.push(setting);
+//     serde_json::to_writer_pretty(&File::create(&set_path)?, &settings)?;
+//     Ok(())
+// }
+
 pub(crate) fn get_categories() -> Result<Vec<Category>> {
     let c: Vec<Category> =
         serde_json::from_reader(&File::open(Path::new(DB_BASEPATH).join(DB_FILE_CATEGORY))?)?;
@@ -42,7 +68,7 @@ pub fn add_category(cat: Category) -> Result<()> {
 }
 
 pub(crate) fn get_recurring() -> Result<Vec<RecurringEntry>> {
-    let mut r: Vec<RecurringEntry> =
+    let r: Vec<RecurringEntry> =
         serde_json::from_reader(&File::open(Path::new(DB_BASEPATH).join(DB_FILE_RECURRING))?)?;
     Ok(r)
 }
@@ -59,6 +85,7 @@ pub fn ensure_db_files_exist() -> Result<()> {
     let cat_path = Path::new(DB_BASEPATH).join(DB_FILE_CATEGORY);
     let book_path = Path::new(DB_BASEPATH).join(DB_FILE_BOOKINGS);
     let rec_path = Path::new(DB_BASEPATH).join(DB_FILE_RECURRING);
+    let set_path = Path::new(DB_BASEPATH).join(DB_FILE_SETTINGS);
     if !cat_path.exists() {
         fs::write(cat_path, "[]")?;
     }
@@ -67,6 +94,9 @@ pub fn ensure_db_files_exist() -> Result<()> {
     }
     if !rec_path.exists() {
         fs::write(rec_path, "[]")?;
+    }
+    if !set_path.exists() {
+        fs::write(set_path, "[]")?;
     }
     Ok(())
 }

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use chrono::serde::ts_seconds;
 use chrono::DateTime;
 use chrono::Utc;
@@ -39,6 +41,15 @@ pub enum RecurringType {
     Yearly,
 }
 
+impl Display for RecurringType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RecurringType::Monthly => write!(f, "M"),
+            RecurringType::Yearly => write!(f, "Y"),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct RecurringEntry {
     pub name: String,
@@ -48,8 +59,6 @@ pub struct RecurringEntry {
     pub rate_type: RecurringType,
     // #[serde(serialize_with = "to_ts")]
     // pub next_payment_date: DateTime<Utc>,
-    // #[serde(serialize_with = "to_ts")]
-    // pub cancelation_period: DateTime<Utc>,
 }
 
 impl RecurringEntry {
@@ -68,6 +77,10 @@ impl RecurringEntry {
             rate_type,
         }
     }
+
+    pub fn get_montly_amount(&self) -> f32 {
+        self.amount / 12.0
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -81,6 +94,21 @@ impl Category {
         Category {
             token: token.to_string(),
             name: name.to_string(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Setting {
+    pub key: String,
+    pub value: String,
+}
+
+impl Setting {
+    pub fn new(key: &str, value: &str) -> Self {
+        Self {
+            key: key.to_string(),
+            value: value.to_string(),
         }
     }
 }

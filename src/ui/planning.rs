@@ -1,6 +1,8 @@
-use std::collections::HashSet;
-
-use serde_json::error::Category;
+use crate::ui::CURRENCY_SYMBOL;
+use crate::{
+    db,
+    model::{EntryType, RecurringEntry, RecurringType},
+};
 use tui::layout::{Layout, Rect};
 use tui::{
     backend::Backend,
@@ -8,11 +10,6 @@ use tui::{
     style::{Color, Modifier, Style},
     widgets::{Block, BorderType, Borders, Cell, Row, Table},
     Frame,
-};
-
-use crate::{
-    db,
-    model::{EntryType, RecurringEntry, RecurringType},
 };
 
 // TODO: Move all the code that gathers and handles data into its own file
@@ -130,35 +127,41 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
 
 fn render_expense_table<'a>(items: &Vec<&RecurringEntry>, title: String) -> Table<'a> {
     let sum: f32 = items.iter().map(|r| r.amount).sum();
-    let mut items: Vec<_> = items
-        .iter()
-        .map(|b| {
-            Row::new(vec![
-                Cell::from(b.name.to_string()),
-                Cell::from(b.category_token.to_string()),
-                Cell::from(format!("{} €", b.amount)),
-            ])
-        })
-        .collect();
+    let mut expenses = vec![];
 
-    items.push(Row::new(vec![Cell::default()]));
-    items.push(Row::new(vec![
+    for b in items {
+        let mut cells = vec![Cell::from(b.name.to_string())];
+        if b.rate_type == RecurringType::Yearly {
+            cells.push(Cell::from(format!("{} {}", b.amount, *CURRENCY_SYMBOL)));
+            cells.push(Cell::from(format!("{} {}", b.amount, *CURRENCY_SYMBOL)));
+        } else {
+            cells.push(Cell::default());
+        }
+        cells.push(Cell::from(format!("{}", b.rate_type)));
+
+        expenses.push(Row::new(cells));
+    }
+
+    expenses.push(Row::new(vec![Cell::default()]));
+    expenses.push(Row::new(vec![
         Cell::from(" Sum ").style(Style::default().fg(Color::Cyan)),
+        Cell::from(format!("{} {}", sum, *CURRENCY_SYMBOL)).style(Style::default().fg(Color::Cyan)),
         Cell::default(),
-        Cell::from(format!("{} €", sum)).style(Style::default().fg(Color::Cyan)),
     ]));
 
-    let t = Table::new(items)
+    let t = Table::new(expenses)
         .style(Style::default().fg(Color::White))
         .header(
-            Row::new(vec!["Name", "Category", "Amount"]).style(Style::default().fg(Color::Yellow)),
+            Row::new(vec!["Name", "Monthly", "Yearly", "Due"])
+                .style(Style::default().fg(Color::Yellow)),
         )
         .widths(&[
-            Constraint::Length(10),
-            Constraint::Length(10),
-            Constraint::Length(10),
+            Constraint::Percentage(40),
+            Constraint::Percentage(20),
+            Constraint::Percentage(20),
+            Constraint::Percentage(20),
         ])
-        .column_spacing(5)
+        .column_spacing(0)
         .highlight_style(Style::default().add_modifier(Modifier::BOLD))
         .highlight_symbol(">>")
         .block(
@@ -177,7 +180,7 @@ fn render_calc_table<'a>(items: Vec<RecurringEntry>) -> Table<'a> {
         .map(|b| {
             Row::new(vec![
                 Cell::from(b.name.to_string()),
-                Cell::from(format!("{} ‚Ç¨", b.amount)),
+                Cell::from(format!("{} {}", b.amount, *CURRENCY_SYMBOL)),
             ])
         })
         .collect();
