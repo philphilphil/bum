@@ -1,6 +1,6 @@
 use crate::{
     db,
-    model::{EntryType, RecurringEntry},
+    model::{EntryType, RecurringEntry, RecurringType},
 };
 use anyhow::Result;
 
@@ -19,7 +19,19 @@ pub fn calculate_categorie_sums() -> Result<Vec<CategorySum>> {
     for cat in categories {
         let rec: Vec<&RecurringEntry> = items.iter().filter(|c| c.category_token == cat).collect();
 
-        let mut sum = rec.iter().map(|c| c.amount).sum();
+        let monthly_sum: f32 = rec
+            .iter()
+            .filter(|e| e.rate_type == RecurringType::Monthly)
+            .map(|c| c.amount)
+            .sum();
+
+        let yearly_sum: f32 = rec
+            .iter()
+            .filter(|e| e.rate_type == RecurringType::Yearly)
+            .map(|c| c.amount)
+            .sum();
+
+        let mut sum = monthly_sum + (yearly_sum / 12.0);
 
         if rec.first().unwrap().kind == EntryType::Expense {
             sum *= -1.0;
