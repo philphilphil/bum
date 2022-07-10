@@ -1,3 +1,4 @@
+use crate::calculation::{self, CalcResult};
 use crate::ui::CURRENCY_SYMBOL;
 use crate::{
     db,
@@ -47,11 +48,9 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
         .collect();
 
     // rec_i.retain(|r| r.kind == EntryType::Income);
-
-    f.render_widget(
-        render_expense_table(&rec_i, " Calculation ".to_string()),
-        col1[0],
-    );
+    // FIXME: fix bad code
+    let calc_items = calculation::calculate_total(&db::get_recurring().unwrap());
+    f.render_widget(render_calc_table(calc_items), col1[0]);
     f.render_widget(
         render_expense_table(&rec_i, " Income ".to_string()),
         col1[1],
@@ -83,13 +82,9 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
         )
         .split(chunks[2]);
 
-    let mut rec_m = db::get_recurring().unwrap();
-    rec_m.retain(|r| r.rate_type == RecurringType::Monthly);
-
-    let mut rec_y = db::get_recurring().unwrap();
-    rec_y.retain(|r| r.rate_type == RecurringType::Yearly);
-
-    let recurring: Vec<RecurringEntry> = db::get_recurring().unwrap();
+    // FIXME: bad
+    let mut recurring: Vec<RecurringEntry> = db::get_recurring().unwrap();
+    recurring.retain(|r| r.kind != EntryType::Income);
 
     let mut categories: Vec<String> = recurring
         .iter()
@@ -180,7 +175,7 @@ fn render_expense_table<'a>(items: &Vec<&RecurringEntry>, title: String) -> Tabl
     t
 }
 
-fn render_calc_table<'a>(items: Vec<RecurringEntry>) -> Table<'a> {
+fn render_calc_table<'a>(items: Vec<CalcResult>) -> Table<'a> {
     let sum: f32 = items.iter().map(|r| r.amount).sum();
     let mut items: Vec<_> = items
         .iter()
@@ -195,7 +190,6 @@ fn render_calc_table<'a>(items: Vec<RecurringEntry>) -> Table<'a> {
     items.push(Row::new(vec![Cell::default()]));
     items.push(Row::new(vec![
         Cell::from(" Budget Left ").style(Style::default().fg(Color::Cyan)),
-        Cell::default(),
         Cell::from(format!("{} €", sum)).style(Style::default().fg(Color::Cyan)),
     ]));
 

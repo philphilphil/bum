@@ -1,4 +1,5 @@
 // use model::{BookEntry, EntryType};
+mod calculation;
 mod commands;
 mod db;
 mod model;

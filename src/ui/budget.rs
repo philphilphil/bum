@@ -30,7 +30,7 @@ fn render_budget<'a>() -> Table<'a> {
         .map(|b| {
             Row::new(vec![
                 Cell::from(b.name.to_string()),
-                Cell::from(format!("{} {}", b.amount, *CURRENCY_SYMBOL)),
+                Cell::from(format!("{:.2} {}", b.amount, *CURRENCY_SYMBOL)),
                 Cell::from(b.category_token.to_string()),
                 Cell::from(b.date.to_string()),
             ])

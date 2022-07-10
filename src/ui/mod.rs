@@ -107,8 +107,10 @@ fn run_ui<B: Backend>(terminal: &mut Terminal<B>, mut app: UserInterface) -> io:
                     KeyCode::Char('p') => app.index = 0,
                     KeyCode::Char('b') => app.index = 1,
                     KeyCode::Char('s') => app.index = 2,
-                    KeyCode::Char(':') => app.mode = UIMode::Command,
-                    KeyCode::Char('c') => app.mode = UIMode::Command,
+                    KeyCode::Char(':') | KeyCode::Char('c') => {
+                        app.mode = UIMode::Command;
+                        app.error_message = String::new();
+                    }
                     _ => {}
                 },
                 UIMode::Command => match key.code {
