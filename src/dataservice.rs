@@ -1,11 +1,16 @@
-use crate::model::{EntryType, RecurringEntry};
+use crate::{
+    db,
+    model::{EntryType, RecurringEntry},
+};
+use anyhow::Result;
 
-pub struct CalcResult {
+pub struct CategorySum {
     pub name: String,
     pub amount: f32,
 }
 
-pub fn calculate_total(items: &Vec<RecurringEntry>) -> Vec<CalcResult> {
+pub fn calculate_categorie_sums() -> Result<Vec<CategorySum>> {
+    let items = db::get_recurring()?;
     let mut result = vec![];
     let mut categories: Vec<String> = items.iter().map(|c| c.category_token.to_string()).collect();
     categories.sort();
@@ -20,10 +25,18 @@ pub fn calculate_total(items: &Vec<RecurringEntry>) -> Vec<CalcResult> {
             sum *= -1.0;
         }
 
-        result.push(CalcResult {
+        result.push(CategorySum {
             name: cat,
             amount: sum,
         });
     }
-    result
+    Ok(result)
+}
+
+pub fn get_recurring(kind: EntryType) -> Result<Vec<RecurringEntry>> {
+    let recurring = db::get_recurring()?
+        .into_iter()
+        .filter(|c| c.kind == kind)
+        .collect();
+    Ok(recurring)
 }

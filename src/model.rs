@@ -77,10 +77,6 @@ impl RecurringEntry {
             rate_type,
         }
     }
-
-    pub fn get_montly_amount(&self) -> f32 {
-        self.amount / 12.0
-    }
 }
 
 #[derive(Serialize, Deserialize)]

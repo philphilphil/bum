@@ -1,10 +1,7 @@
-use crate::calculation::{self, CalcResult};
+use crate::dataservice::{self, CategorySum};
+use crate::model::{EntryType, RecurringEntry, RecurringType};
 use crate::ui::CURRENCY_SYMBOL;
-use crate::{
-    db,
-    model::{EntryType, RecurringEntry, RecurringType},
-};
-use crossterm::style::style;
+use anyhow::Result;
 use tui::layout::{Layout, Rect};
 use tui::{
     backend::Backend,
@@ -14,9 +11,7 @@ use tui::{
     Frame,
 };
 
-// TODO: Move all the code that gathers and handles data into its own file
-
-pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
+pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) -> Result<()> {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(
@@ -29,7 +24,7 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
         )
         .split(chunk);
 
-    // Col 1
+    // Col 1 - Calculation + Income
     let col1 = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
@@ -42,20 +37,13 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
         )
         .split(chunks[0]);
 
-    let rec_i = db::get_recurring().unwrap();
-    let rec_i: Vec<&RecurringEntry> = rec_i
-        .iter()
-        .filter(|c| c.kind == EntryType::Income)
-        .collect();
+    let calc_entries = dataservice::calculate_categorie_sums()?;
+    f.render_widget(render_calc_table(calc_entries), col1[0]);
 
-    // rec_i.retain(|r| r.kind == EntryType::Income);
-    // FIXME: fix bad code
-    let calc_items = calculation::calculate_total(&db::get_recurring().unwrap());
-    f.render_widget(render_calc_table(calc_items), col1[0]);
-    f.render_widget(render_income_table(&rec_i), col1[1]);
+    let income_entries = dataservice::get_recurring(EntryType::Income)?;
+    f.render_widget(render_income_table(&income_entries), col1[1]);
 
-    // group by categorie, render one box for each category
-    //  Col 2
+    //  Col 2 and Col 3 - Render each category in its own box
     let col2 = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
@@ -80,21 +68,22 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
         )
         .split(chunks[2]);
 
-    // FIXME: bad
-    let mut recurring: Vec<RecurringEntry> = db::get_recurring().unwrap();
-    recurring.retain(|r| r.kind != EntryType::Income);
+    let mut rec_entries: Vec<RecurringEntry> = dataservice::get_recurring(EntryType::Expense)?;
 
-    let mut categories: Vec<String> = recurring
+    // get all categories distinct
+    let mut categories: Vec<String> = rec_entries
         .iter()
         .map(|c| c.category_token.to_string())
         .collect();
     categories.sort();
     categories.dedup();
 
+    // Foreach categorie render a box, build table with expenses for it and render it into a col.
+    // Start top left, then top right, then second row left, second row right etc.
     let mut widget_col = 0;
     let mut widget_row = 0;
     for cat in categories {
-        let rec: Vec<&RecurringEntry> = recurring
+        let rec: Vec<&RecurringEntry> = rec_entries
             .iter()
             .filter(|c| c.category_token == cat)
             .collect();
@@ -116,6 +105,7 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
             widget_row += 1;
         }
     }
+    Ok(())
 }
 
 fn render_expense_table<'a>(items: &Vec<&RecurringEntry>, title: String) -> Table<'a> {
@@ -174,7 +164,7 @@ fn render_expense_table<'a>(items: &Vec<&RecurringEntry>, title: String) -> Tabl
     t
 }
 
-fn render_income_table<'a>(items: &Vec<&RecurringEntry>) -> Table<'a> {
+fn render_income_table<'a>(items: &Vec<RecurringEntry>) -> Table<'a> {
     let sum: f32 = items.iter().map(|r| r.amount).sum();
     let mut expenses = vec![];
 
@@ -208,7 +198,7 @@ fn render_income_table<'a>(items: &Vec<&RecurringEntry>) -> Table<'a> {
     t
 }
 
-fn render_calc_table<'a>(items: Vec<CalcResult>) -> Table<'a> {
+fn render_calc_table<'a>(items: Vec<CategorySum>) -> Table<'a> {
     let sum: f32 = items.iter().map(|r| r.amount).sum();
     let mut items: Vec<_> = items
         .iter()

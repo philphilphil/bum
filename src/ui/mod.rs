@@ -3,14 +3,13 @@ mod planning;
 mod settings;
 use crate::db;
 use anyhow::Result;
-use std::io;
-
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use lazy_static::lazy_static;
+use std::io;
 use tui::layout::Layout;
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -94,9 +93,9 @@ pub fn draw() -> Result<()> {
     Ok(())
 }
 
-fn run_ui<B: Backend>(terminal: &mut Terminal<B>, mut app: UserInterface) -> io::Result<()> {
+fn run_ui<B: Backend>(terminal: &mut Terminal<B>, mut app: UserInterface) -> Result<()> {
     loop {
-        terminal.draw(|f| ui(f, &app))?;
+        terminal.draw(|f| ui(f, &app).expect("Error drawing UI"))?;
 
         if let Event::Key(key) = event::read()? {
             match app.mode {
@@ -140,7 +139,7 @@ fn run_ui<B: Backend>(terminal: &mut Terminal<B>, mut app: UserInterface) -> io:
     }
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
+fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) -> Result<()> {
     let size = f.size();
 
     let mut cmd_box_size = 3;
@@ -201,11 +200,12 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
 
     // Content
     match app.index {
-        0 => planning::render(f, chunks[1]),
-        1 => budget::render(f, chunks[1]),
-        2 => settings::render(f, chunks[1]),
+        0 => planning::render(f, chunks[1])?,
+        1 => budget::render(f, chunks[1])?,
+        2 => settings::render(f, chunks[1])?,
         _ => {}
     }
+    Ok(())
 }
 
 fn get_command_help_text(app: &str) -> String {

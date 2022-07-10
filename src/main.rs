@@ -1,6 +1,6 @@
 // use model::{BookEntry, EntryType};
-mod calculation;
 mod commands;
+mod dataservice;
 mod db;
 mod model;
 mod ui;

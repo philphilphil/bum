@@ -1,4 +1,5 @@
 use crate::ui::CURRENCY_SYMBOL;
+use anyhow::Result;
 use tui::layout::{Layout, Rect};
 use tui::{
     backend::Backend,
@@ -10,7 +11,7 @@ use tui::{
 
 use crate::db;
 
-pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
+pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) -> Result<()> {
     let budget_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
@@ -20,6 +21,8 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
 
     // f.render_widget(table, budget_chunks[1]);
     f.render_widget(table2, budget_chunks[0]);
+
+    Ok(())
 }
 
 fn render_budget<'a>() -> Table<'a> {

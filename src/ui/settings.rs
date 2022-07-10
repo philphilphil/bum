@@ -1,3 +1,4 @@
+use anyhow::Result;
 use tui::layout::{Layout, Rect};
 use tui::{
     backend::Backend,
@@ -9,7 +10,7 @@ use tui::{
 
 use crate::db;
 
-pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
+pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) -> Result<()> {
     let setting_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(
@@ -28,6 +29,8 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
 
     let categories = render_category_table();
     f.render_widget(categories, setting_chunks[1]);
+
+    Ok(())
 }
 
 fn render_settings_table<'a>() -> Table<'a> {
