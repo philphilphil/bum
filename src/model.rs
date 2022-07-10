@@ -100,15 +100,6 @@ pub struct Setting {
     pub value: String,
 }
 
-impl Setting {
-    pub fn new(key: &str, value: &str) -> Self {
-        Self {
-            key: key.to_string(),
-            value: value.to_string(),
-        }
-    }
-}
-
 // #[derive(Serialize, Deserialize)]
 // pub struct RecurringIncome {
 //     pub name: String,

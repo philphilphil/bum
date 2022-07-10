@@ -1,7 +1,7 @@
 mod budget;
 mod planning;
 mod settings;
-use crate::db;
+use crate::{dataservice, db};
 use anyhow::Result;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
@@ -9,7 +9,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use lazy_static::lazy_static;
-use std::io;
+use std::{collections::HashMap, io};
 use tui::layout::Layout;
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -24,6 +24,8 @@ use crate::commands;
 
 lazy_static! {
     pub static ref CURRENCY_SYMBOL: String = db::get_setting_currency_symbol().unwrap();
+    pub static ref CATEGORY_TOKEN_MAP: HashMap<String, String> =
+        dataservice::get_categorie_map().unwrap();
 }
 
 #[derive(Default, PartialEq)]
@@ -162,33 +164,11 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) -> Result<()> {
     // Bottom - Overview/Command
     match app.mode {
         UIMode::Normal => {
-            let bottom: Paragraph = get_bottom(app);
+            let bottom: Paragraph = get_overview(app);
             f.render_widget(bottom, chunks[2]);
         }
         UIMode::Command => {
-            let text = vec![
-                Spans::from(Span::styled(
-                    &app.command,
-                    Style::default().fg(Color::White),
-                )),
-                Spans::from(Span::styled(
-                    get_command_help_text(&app.command),
-                    Style::default()
-                        .add_modifier(Modifier::ITALIC)
-                        .fg(Color::LightBlue),
-                )),
-            ];
-            let input = Paragraph::new(text)
-                .style(match app.mode {
-                    UIMode::Normal => Style::default(),
-                    UIMode::Command => Style::default().fg(Color::Yellow),
-                })
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .border_type(BorderType::Thick)
-                        .title(" Command "),
-                );
+            let input = get_command(app);
             f.set_cursor(chunks[2].x + app.command.len() as u16 + 1, chunks[2].y + 1);
             f.render_widget(input, chunks[2]);
         }
@@ -253,20 +233,30 @@ fn get_tab_menu<'a>(app: &UserInterface<'a>) -> Tabs<'a> {
     tabs
 }
 
-fn get_bottom<'a>(app: &'a UserInterface) -> Paragraph<'a> {
-    // TODO: calc budget left
+fn get_overview<'a>(app: &'a UserInterface) -> Paragraph<'a> {
+    let overview = dataservice::calc_overview().unwrap();
     let mut text = Spans::from(vec![
         Span::styled(
-            "Budget Left 321.12 $       ",
-            Style::default().fg(Color::LightCyan),
-        ),
-        Span::styled(
-            "Montlhy Income 5000 $      ",
+            format!("  Income: {:.2} {}", overview.income, *CURRENCY_SYMBOL),
             Style::default().fg(Color::LightGreen),
         ),
         Span::styled(
-            "Montlhy Expenses 2033 $",
+            format!("  Expenses: {:.2} {}", overview.expenses, *CURRENCY_SYMBOL),
             Style::default().fg(Color::LightRed),
+        ),
+        Span::styled(
+            format!(
+                "  Budget Spent: {:.2} {}",
+                overview.budget_spent, *CURRENCY_SYMBOL
+            ),
+            Style::default().fg(Color::LightMagenta),
+        ),
+        Span::styled(
+            format!(
+                "  Budget left: {:.2} {}",
+                overview.budget_left, *CURRENCY_SYMBOL
+            ),
+            Style::default().fg(Color::Green),
         ),
     ]);
 
@@ -285,4 +275,31 @@ fn get_bottom<'a>(app: &'a UserInterface) -> Paragraph<'a> {
             .border_type(BorderType::Thick),
     );
     bottom
+}
+
+fn get_command<'a>(app: &'a UserInterface) -> Paragraph<'a> {
+    let text = vec![
+        Spans::from(Span::styled(
+            &app.command,
+            Style::default().fg(Color::White),
+        )),
+        Spans::from(Span::styled(
+            get_command_help_text(&app.command),
+            Style::default()
+                .add_modifier(Modifier::ITALIC)
+                .fg(Color::LightBlue),
+        )),
+    ];
+    let input = Paragraph::new(text)
+        .style(match app.mode {
+            UIMode::Normal => Style::default(),
+            UIMode::Command => Style::default().fg(Color::Yellow),
+        })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Thick)
+                .title(" Command "),
+        );
+    input
 }

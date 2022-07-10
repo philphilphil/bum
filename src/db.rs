@@ -14,13 +14,13 @@ const DB_FILE_SETTINGS: &str = "settings.json";
 const DB_FILE_BOOKINGS: &str = "data_bookings.json";
 const DB_FILE_RECURRING: &str = "data_recurring.json";
 
-pub fn get_bookings() -> Result<Vec<BookEntry>> {
+pub fn get_expenses() -> Result<Vec<BookEntry>> {
     let b: Vec<BookEntry> =
         serde_json::from_reader(&File::open(Path::new(DB_BASEPATH).join(DB_FILE_BOOKINGS))?)?;
     Ok(b)
 }
 
-pub fn add_booking(booking: BookEntry) -> Result<()> {
+pub fn add_expense(booking: BookEntry) -> Result<()> {
     let book_path = Path::new(DB_BASEPATH).join(DB_FILE_BOOKINGS);
     let mut b: Vec<BookEntry> = serde_json::from_reader(&File::open(&book_path)?)?;
     b.push(booking);

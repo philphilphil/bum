@@ -27,7 +27,7 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) -> Result<()> {
 
 fn render_budget<'a>() -> Table<'a> {
     // active
-    let items: Vec<_> = db::get_bookings()
+    let items: Vec<_> = db::get_expenses()
         .unwrap()
         .iter()
         .map(|b| {

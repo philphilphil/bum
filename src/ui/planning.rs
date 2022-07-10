@@ -11,6 +11,8 @@ use tui::{
     Frame,
 };
 
+use super::CATEGORY_TOKEN_MAP;
+
 pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) -> Result<()> {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -68,7 +70,7 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) -> Result<()> {
         )
         .split(chunks[2]);
 
-    let mut rec_entries: Vec<RecurringEntry> = dataservice::get_recurring(EntryType::Expense)?;
+    let rec_entries: Vec<RecurringEntry> = dataservice::get_recurring(EntryType::Expense)?;
 
     // get all categories distinct
     let mut categories: Vec<String> = rec_entries
@@ -88,12 +90,14 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) -> Result<()> {
             .filter(|c| c.category_token == cat)
             .collect();
 
+        let cat_name = CATEGORY_TOKEN_MAP.get(&cat).unwrap().to_string();
+
         match widget_col {
             0 => {
-                f.render_widget(render_expense_table(&rec, cat.clone()), col2[widget_row]);
+                f.render_widget(render_expense_table(&rec, cat_name), col2[widget_row]);
             }
             1 => {
-                f.render_widget(render_expense_table(&rec, cat.clone()), col3[widget_row]);
+                f.render_widget(render_expense_table(&rec, cat_name), col3[widget_row]);
             }
             _ => panic!("Invalid col"),
         }
@@ -194,7 +198,7 @@ fn render_income_table<'a>(items: &Vec<RecurringEntry>) -> Table<'a> {
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(format!(" Income ",))
+                .title(" Income ".to_string())
                 .border_type(BorderType::Plain)
                 .border_style(Style::default().fg(Color::LightGreen)),
         );
@@ -216,7 +220,7 @@ fn render_calc_table<'a>(items: Vec<CategorySum>) -> Table<'a> {
     items.push(Row::new(vec![Cell::default()]));
     items.push(Row::new(vec![
         Cell::from(" Budget Left ").style(Style::default().fg(Color::Cyan)),
-        Cell::from(format!("{} €", sum)).style(Style::default().fg(Color::Cyan)),
+        Cell::from(format!("{:0.2} €", sum)).style(Style::default().fg(Color::Cyan)),
     ]));
 
     let t = Table::new(items)

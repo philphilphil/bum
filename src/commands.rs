@@ -24,7 +24,7 @@ pub fn handle_command(cmd: &str) -> Result<()> {
                 action[2],
                 action[3].parse::<f32>().unwrap(),
             );
-            db::add_booking(exp)?;
+            db::add_expense(exp)?;
         }
         "ari" => {
             let rec = RecurringEntry::new(
