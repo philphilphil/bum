@@ -4,6 +4,7 @@ use crate::{
     db,
     model::{EntryType, RecurringEntry, RecurringType},
 };
+use crossterm::style::style;
 use tui::layout::{Layout, Rect};
 use tui::{
     backend::Backend,
@@ -51,10 +52,7 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) {
     // FIXME: fix bad code
     let calc_items = calculation::calculate_total(&db::get_recurring().unwrap());
     f.render_widget(render_calc_table(calc_items), col1[0]);
-    f.render_widget(
-        render_expense_table(&rec_i, " Income ".to_string()),
-        col1[1],
-    );
+    f.render_widget(render_income_table(&rec_i), col1[1]);
 
     // group by categorie, render one box for each category
     //  Col 2
@@ -170,7 +168,42 @@ fn render_expense_table<'a>(items: &Vec<&RecurringEntry>, title: String) -> Tabl
             Block::default()
                 .borders(Borders::ALL)
                 .title(format!(" {} ", title))
-                .border_type(BorderType::Plain),
+                .border_type(BorderType::Plain)
+                .border_style(Style::default().fg(Color::LightRed)),
+        );
+    t
+}
+
+fn render_income_table<'a>(items: &Vec<&RecurringEntry>) -> Table<'a> {
+    let sum: f32 = items.iter().map(|r| r.amount).sum();
+    let mut expenses = vec![];
+
+    for b in items {
+        let mut cells = vec![Cell::from(b.name.to_string())];
+        cells.push(Cell::from(format!("{:.2} {}", b.amount, *CURRENCY_SYMBOL)));
+        expenses.push(Row::new(cells));
+    }
+
+    expenses.push(Row::new(vec![Cell::default()]));
+    expenses.push(Row::new(vec![
+        Cell::from(" Sum ").style(Style::default().fg(Color::Cyan)),
+        Cell::from(format!("{:.2} {}", sum, *CURRENCY_SYMBOL))
+            .style(Style::default().fg(Color::Cyan)),
+    ]));
+
+    let t = Table::new(expenses)
+        .style(Style::default().fg(Color::White))
+        .header(Row::new(vec!["Name", "Monthly"]).style(Style::default().fg(Color::Yellow)))
+        .widths(&[Constraint::Percentage(70), Constraint::Percentage(30)])
+        .column_spacing(0)
+        .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+        .highlight_symbol(">>")
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(format!(" Income ",))
+                .border_type(BorderType::Plain)
+                .border_style(Style::default().fg(Color::LightGreen)),
         );
     t
 }
@@ -204,7 +237,8 @@ fn render_calc_table<'a>(items: Vec<CalcResult>) -> Table<'a> {
             Block::default()
                 .borders(Borders::ALL)
                 .title(" Calculation ")
-                .border_type(BorderType::Plain),
+                .border_type(BorderType::Plain)
+                .border_style(Style::default().fg(Color::LightCyan)),
         );
     t
 }

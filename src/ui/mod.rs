@@ -184,7 +184,12 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) {
                     UIMode::Normal => Style::default(),
                     UIMode::Command => Style::default().fg(Color::Yellow),
                 })
-                .block(Block::default().borders(Borders::ALL).title(" Command "));
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Thick)
+                        .title(" Command "),
+                );
             f.set_cursor(chunks[2].x + app.command.len() as u16 + 1, chunks[2].y + 1);
             f.render_widget(input, chunks[2]);
         }
@@ -248,31 +253,36 @@ fn get_tab_menu<'a>(app: &UserInterface<'a>) -> Tabs<'a> {
     tabs
 }
 
-fn get_bottom<'a>(app: &UserInterface) -> Paragraph<'a> {
-    // FIXME: fix bad code
+fn get_bottom<'a>(app: &'a UserInterface) -> Paragraph<'a> {
     // TODO: calc budget left
-    let mut bottom = Paragraph::new("Budget left: 321,32 ")
-        .style(Style::default().fg(Color::LightCyan))
-        .alignment(Alignment::Center)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .style(Style::default().fg(Color::White))
-                .title(" Overview / Command ")
-                .border_type(BorderType::Plain),
-        );
+    let mut text = Spans::from(vec![
+        Span::styled(
+            "Budget Left 321.12 $       ",
+            Style::default().fg(Color::LightCyan),
+        ),
+        Span::styled(
+            "Montlhy Income 5000 $      ",
+            Style::default().fg(Color::LightGreen),
+        ),
+        Span::styled(
+            "Montlhy Expenses 2033 $",
+            Style::default().fg(Color::LightRed),
+        ),
+    ]);
 
     if !app.error_message.is_empty() {
-        bottom = Paragraph::new(app.error_message.clone())
-            .style(Style::default().fg(Color::Red))
-            .alignment(Alignment::Left)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .style(Style::default().fg(Color::White))
-                    .title(" Overview / Command ")
-                    .border_type(BorderType::Plain),
-            );
+        text = Spans::from(Span::styled(
+            &app.error_message,
+            Style::default().fg(Color::Red),
+        ));
     }
+
+    let bottom = Paragraph::new(text).alignment(Alignment::Center).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .style(Style::default().fg(Color::White))
+            .title(" Overview / Command ")
+            .border_type(BorderType::Thick),
+    );
     bottom
 }
