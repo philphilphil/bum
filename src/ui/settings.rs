@@ -10,7 +10,9 @@ use tui::{
 
 use crate::db;
 
-pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) -> Result<()> {
+use super::UserInterface;
+
+pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect, app: &UserInterface) -> Result<()> {
     let setting_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(

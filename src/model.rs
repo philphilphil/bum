@@ -86,10 +86,10 @@ pub struct Category {
 }
 
 impl Category {
-    pub fn new(token: &str, name: &str) -> Self {
+    pub fn new(name: &str, token: &str) -> Self {
         Category {
-            token: token.to_string(),
             name: name.to_string(),
+            token: token.to_string(),
         }
     }
 }

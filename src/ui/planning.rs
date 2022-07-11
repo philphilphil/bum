@@ -11,9 +11,9 @@ use tui::{
     Frame,
 };
 
-use super::CATEGORY_TOKEN_MAP;
+use super::{UserInterface, CATEGORY_TOKEN_MAP};
 
-pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) -> Result<()> {
+pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect, app: &UserInterface) -> Result<()> {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(
@@ -39,10 +39,10 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) -> Result<()> {
         )
         .split(chunks[0]);
 
-    let calc_entries = dataservice::calculate_categorie_sums()?;
+    let calc_entries = app.dataservice.calculate_categorie_sums()?;
     f.render_widget(render_calc_table(calc_entries), col1[0]);
 
-    let income_entries = dataservice::get_recurring(EntryType::Income)?;
+    let income_entries = app.dataservice.get_recurring(EntryType::Income)?;
     f.render_widget(render_income_table(&income_entries), col1[1]);
 
     //  Col 2 and Col 3 - Render each category in its own box
@@ -70,7 +70,7 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) -> Result<()> {
         )
         .split(chunks[2]);
 
-    let rec_entries: Vec<RecurringEntry> = dataservice::get_recurring(EntryType::Expense)?;
+    let rec_entries = app.dataservice.get_recurring(EntryType::Expense).unwrap();
 
     // get all categories distinct
     let mut categories: Vec<String> = rec_entries
@@ -85,7 +85,7 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) -> Result<()> {
     let mut widget_col = 0;
     let mut widget_row = 0;
     for cat in categories {
-        let rec: Vec<&RecurringEntry> = rec_entries
+        let rec: Vec<&&RecurringEntry> = rec_entries
             .iter()
             .filter(|c| c.category_token == cat)
             .collect();
@@ -112,7 +112,7 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) -> Result<()> {
     Ok(())
 }
 
-fn render_expense_table<'a>(items: &Vec<&RecurringEntry>, title: String) -> Table<'a> {
+fn render_expense_table<'a>(items: &Vec<&&RecurringEntry>, title: String) -> Table<'a> {
     let mut sum: f32 = 0.0;
     let mut expenses = vec![];
 
@@ -171,7 +171,7 @@ fn render_expense_table<'a>(items: &Vec<&RecurringEntry>, title: String) -> Tabl
     t
 }
 
-fn render_income_table<'a>(items: &Vec<RecurringEntry>) -> Table<'a> {
+fn render_income_table<'a>(items: &Vec<&RecurringEntry>) -> Table<'a> {
     let sum: f32 = items.iter().map(|r| r.amount).sum();
     let mut expenses = vec![];
 

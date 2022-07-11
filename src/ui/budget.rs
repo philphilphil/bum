@@ -11,7 +11,9 @@ use tui::{
 
 use crate::db;
 
-pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect) -> Result<()> {
+use super::UserInterface;
+
+pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect, app: &UserInterface) -> Result<()> {
     let budget_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())

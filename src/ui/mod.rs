@@ -1,6 +1,7 @@
 mod budget;
 mod planning;
 mod settings;
+use crate::dataservice::DataService;
 use crate::{dataservice, db};
 use anyhow::Result;
 use crossterm::{
@@ -25,22 +26,23 @@ use crate::commands;
 lazy_static! {
     pub static ref CURRENCY_SYMBOL: String = db::get_setting_currency_symbol().unwrap();
     pub static ref CATEGORY_TOKEN_MAP: HashMap<String, String> =
-        dataservice::get_categorie_map().unwrap();
+        DataService::new().get_categorie_map().unwrap();
 }
 
 #[derive(Default, PartialEq)]
-enum UIMode {
+pub enum UIMode {
     #[default]
     Normal,
     Command,
 }
 
-struct UserInterface<'a> {
+pub struct UserInterface<'a> {
     pub tabs: Vec<&'a str>,
     pub index: usize,
     pub mode: UIMode,
     pub error_message: String,
     command: String,
+    pub dataservice: DataService,
 }
 
 impl<'a> UserInterface<'a> {
@@ -51,6 +53,7 @@ impl<'a> UserInterface<'a> {
             mode: UIMode::default(),
             command: String::new(),
             error_message: String::new(),
+            dataservice: DataService::new(),
         }
     }
 
@@ -138,6 +141,7 @@ fn run_ui<B: Backend>(terminal: &mut Terminal<B>, mut app: UserInterface) -> Res
                 },
             }
         }
+        app.dataservice.reload();
     }
 }
 
@@ -180,9 +184,9 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) -> Result<()> {
 
     // Content
     match app.index {
-        0 => planning::render(f, chunks[1])?,
-        1 => budget::render(f, chunks[1])?,
-        2 => settings::render(f, chunks[1])?,
+        0 => planning::render(f, chunks[1], app)?,
+        1 => budget::render(f, chunks[1], app)?,
+        2 => settings::render(f, chunks[1], app)?,
         _ => {}
     }
     Ok(())
@@ -234,27 +238,32 @@ fn get_tab_menu<'a>(app: &UserInterface<'a>) -> Tabs<'a> {
 }
 
 fn get_overview<'a>(app: &'a UserInterface) -> Paragraph<'a> {
-    let overview = dataservice::calc_overview().unwrap();
     let mut text = Spans::from(vec![
         Span::styled(
-            format!("  Income: {:.2} {}", overview.income, *CURRENCY_SYMBOL),
+            format!(
+                "  Income: {:.2} {}",
+                app.dataservice.total_income, *CURRENCY_SYMBOL
+            ),
             Style::default().fg(Color::LightGreen),
         ),
         Span::styled(
-            format!("  Expenses: {:.2} {}", overview.expenses, *CURRENCY_SYMBOL),
+            format!(
+                "  Expenses: {:.2} {}",
+                app.dataservice.total_expenses, *CURRENCY_SYMBOL
+            ),
             Style::default().fg(Color::LightRed),
         ),
         Span::styled(
             format!(
                 "  Budget Spent: {:.2} {}",
-                overview.budget_spent, *CURRENCY_SYMBOL
+                app.dataservice.total_budget_spent, *CURRENCY_SYMBOL
             ),
             Style::default().fg(Color::LightMagenta),
         ),
         Span::styled(
             format!(
                 "  Budget left: {:.2} {}",
-                overview.budget_left, *CURRENCY_SYMBOL
+                app.dataservice.total_budget_left, *CURRENCY_SYMBOL
             ),
             Style::default().fg(Color::Green),
         ),
