@@ -19,26 +19,18 @@ pub struct DataService {
     pub total_budget_left: f32,
     recurring_entries: Vec<RecurringEntry>,
     budget_entries: Vec<BookEntry>,
+    budget_entries_archive: Vec<BookEntry>,
     categories: Vec<Category>,
 }
+
 impl DataService {
     pub fn new() -> Self {
-        let mut data_service = DataService {
-            total_income: 0.0,
-            total_expenses: 0.0,
-            total_budget_spent: 0.0,
-            total_budget_left: 0.0,
-            // FIXME: fix error handling
-            recurring_entries: db::get_recurring().unwrap(),
-            budget_entries: db::get_expenses().unwrap(),
-            categories: db::get_categories().unwrap(),
-        };
-
-        data_service.calc_overview().unwrap();
+        let mut data_service = DataService::default();
+        data_service.reload_data();
         data_service
     }
 
-    pub fn reload(&mut self) {
+    pub fn reload_data(&mut self) {
         self.recurring_entries = db::get_recurring().unwrap();
         self.budget_entries = db::get_expenses().unwrap();
         self.categories = db::get_categories().unwrap();
@@ -104,6 +96,14 @@ impl DataService {
         Ok(recurring)
     }
 
+    pub fn get_bookings(&self) -> Result<&Vec<BookEntry>> {
+        Ok(&self.budget_entries)
+    }
+
+    pub fn get_bookings_archive(&self) -> Result<&Vec<BookEntry>> {
+        Ok(&self.budget_entries_archive)
+    }
+
     pub fn get_categorie_map(&self) -> Result<HashMap<String, String>> {
         let mut categorie_map = HashMap::new();
         for c in &self.categories {
@@ -125,11 +125,37 @@ impl DataService {
         let yearly: f32 = yearly_entries.iter().map(|i| i.amount).sum::<f32>() / 12.0;
         let budget_spent = self.budget_entries.iter().map(|i| i.amount).sum();
 
+        // FIXME: add calc of bookentry income
+
         self.total_income = income;
         self.total_expenses = yearly + monthly;
         self.total_budget_left = income - (monthly + yearly + budget_spent);
         self.total_budget_spent = budget_spent;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_simple_calculation() {
+        let mut ds = DataService::default();
+        ds.budget_entries = vec![
+            BookEntry::new("T", EntryType::Expense, "tt", 2.00),
+            BookEntry::new("T", EntryType::Expense, "tt", 1.00),
+            BookEntry::new("T", EntryType::Expense, "tt", 1.00),
+            BookEntry::new("T", EntryType::Expense, "tt", 3.00),
+            BookEntry::new("T", EntryType::Income, "tt", 3.00),
+        ];
+        ds.recurring_entries = vec![
+            RecurringEntry::new("Ti", EntryType::Expense, "tt", 1.00, RecurringType::Monthly),
+            RecurringEntry::new("Ti", EntryType::Income, "tt", 10.00, RecurringType::Monthly),
+        ];
+        ds.calc_overview().unwrap();
+
+        assert_eq!(ds.total_budget_left, 5.00);
     }
 }

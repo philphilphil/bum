@@ -12,11 +12,19 @@ const DB_FILE_CATEGORY: &str = "data_categories.json";
 const DB_FILE_SETTINGS: &str = "settings.json";
 // TODO: Split into active and archive bookings
 const DB_FILE_BOOKINGS: &str = "data_bookings.json";
+const DB_FILE_BOOKINGS_ARCHIVE: &str = "data_bookings_archive.json";
 const DB_FILE_RECURRING: &str = "data_recurring.json";
 
 pub fn get_expenses() -> Result<Vec<BookEntry>> {
     let b: Vec<BookEntry> =
         serde_json::from_reader(&File::open(Path::new(DB_BASEPATH).join(DB_FILE_BOOKINGS))?)?;
+    Ok(b)
+}
+
+pub fn get_expenses_archive() -> Result<Vec<BookEntry>> {
+    let b: Vec<BookEntry> = serde_json::from_reader(&File::open(
+        Path::new(DB_BASEPATH).join(DB_FILE_BOOKINGS_ARCHIVE),
+    )?)?;
     Ok(b)
 }
 

@@ -141,7 +141,7 @@ fn run_ui<B: Backend>(terminal: &mut Terminal<B>, mut app: UserInterface) -> Res
                 },
             }
         }
-        app.dataservice.reload();
+        app.dataservice.reload_data();
     }
 }
 
