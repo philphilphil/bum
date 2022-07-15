@@ -34,6 +34,7 @@ impl DataService {
     pub fn load_data(&mut self) -> Result<()> {
         self.recurring_bookings = db::get_recurring()?;
         self.budget_bookings = db::get_expenses()?;
+        self.budget_bookings_archive = db::get_expenses_archive()?;
         self.categories = db::get_categories()?;
         Ok(())
     }

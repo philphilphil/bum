@@ -1,4 +1,4 @@
-use crate::dataservice::{self, CategorySum};
+use crate::dataservice::CategorySum;
 use crate::model::{BookingType, RecurringBooking, RecurringType};
 use crate::ui::CURRENCY_SYMBOL;
 use anyhow::Result;

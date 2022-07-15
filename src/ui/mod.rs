@@ -2,7 +2,7 @@ mod budget;
 mod planning;
 mod settings;
 use crate::dataservice::DataService;
-use crate::{dataservice, db};
+use crate::db;
 use anyhow::Result;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},

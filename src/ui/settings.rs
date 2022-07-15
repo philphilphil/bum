@@ -12,7 +12,7 @@ use crate::db;
 
 use super::UserInterface;
 
-pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect, app: &UserInterface) -> Result<()> {
+pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect, _app: &UserInterface) -> Result<()> {
     let setting_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(
