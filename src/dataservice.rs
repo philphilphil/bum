@@ -150,45 +150,73 @@ impl DataService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::BookingType::*;
+    use crate::model::RecurringType::*;
 
     #[test]
     fn test_simple_calculation() {
         let mut ds = DataService::default();
-        ds.budget_bookings = vec![
-            BudgetBooking::new("T", BookingType::Expense, "tt", 2.00),
-            BudgetBooking::new("T", BookingType::Expense, "tt", 1.00),
-            BudgetBooking::new("T", BookingType::Expense, "tt", 1.00),
-            BudgetBooking::new("T", BookingType::Expense, "tt", 3.00),
-            BudgetBooking::new("T", BookingType::Income, "tt", 3.00),
+        let budget_bookings = vec![
+            BudgetBooking::new("T", Expense, "tt", 2.00),
+            BudgetBooking::new("T", Expense, "tt", 1.00),
+            BudgetBooking::new("T", Expense, "tt", 1.00),
+            BudgetBooking::new("T", Expense, "tt", 3.00),
+            BudgetBooking::new("T", Income, "tt", 3.00),
         ];
-        ds.recurring_bookings = vec![
-            RecurringBooking::new(
-                "Ti",
-                BookingType::Expense,
-                "tt",
-                1.00,
-                RecurringType::Monthly,
-            ),
-            RecurringBooking::new(
-                "Ti",
-                BookingType::Expense,
-                "tt",
-                12.00,
-                RecurringType::Yearly,
-            ),
-            RecurringBooking::new(
-                "Ti",
-                BookingType::Income,
-                "tt",
-                10.00,
-                RecurringType::Monthly,
-            ),
+        let recurring_bookings = vec![
+            RecurringBooking::new("Ti", Expense, "tt", 1.00, Monthly),
+            RecurringBooking::new("Ti", Expense, "tt", 12.00, Yearly),
+            RecurringBooking::new("Ti", Income, "tt", 10.00, Monthly),
         ];
+
+        ds.budget_bookings = budget_bookings;
+        ds.recurring_bookings = recurring_bookings;
         ds.calculate().unwrap();
 
         assert_eq!(ds.total_budget_left, 4.00);
         assert_eq!(ds.total_income, 10.00);
         assert_eq!(ds.total_reccuring_expenses, 2.00);
         assert_eq!(ds.total_budget_spent, 4.00);
+    }
+
+    #[test]
+    fn test_complex_calculation() {
+        let mut ds = DataService::default();
+        let budget_bookings = vec![
+            BudgetBooking::new("E1", Expense, "tt", 3.00),
+            BudgetBooking::new("E2", Expense, "tt", 33.12),
+            BudgetBooking::new("E3", Expense, "tt", 13.49),
+            BudgetBooking::new("E4", Expense, "tt", 32.00),
+            BudgetBooking::new("E5", Expense, "tt", 22.22),
+            BudgetBooking::new("E6", Expense, "tt", 750.00),
+            BudgetBooking::new("E7", Expense, "tt", 123.01),
+            BudgetBooking::new("I1", Income, "tt", 10.00),
+            BudgetBooking::new("I2", Income, "tt", 33.33),
+            BudgetBooking::new("I3", Income, "tt", 5.49),
+        ];
+        let recurring_bookings = vec![
+            RecurringBooking::new("Income", Income, "tt", 4000.00, Monthly),
+            RecurringBooking::new("M1", Expense, "tt", 1.00, Monthly),
+            RecurringBooking::new("M2", Expense, "tt", 2.00, Monthly),
+            RecurringBooking::new("M3", Expense, "tt", 22.50, Monthly),
+            RecurringBooking::new("M4", Expense, "tt", 11.00, Monthly),
+            RecurringBooking::new("M5", Expense, "tt", 21.85, Monthly),
+            RecurringBooking::new("M6", Expense, "tt", 7.01, Monthly),
+            RecurringBooking::new("M7", Expense, "tt", 41.00, Monthly),
+            RecurringBooking::new("M8", Expense, "tt", 600.00, Monthly),
+            RecurringBooking::new("M9", Expense, "tt", 1001.11, Monthly),
+            RecurringBooking::new("Y1", Expense, "tt", 12.00, Yearly),
+            RecurringBooking::new("Y2", Expense, "tt", 389.00, Yearly),
+            RecurringBooking::new("Y3", Expense, "tt", 72.22, Yearly),
+        ];
+
+        ds.budget_bookings = budget_bookings;
+        ds.recurring_bookings = recurring_bookings;
+        ds.calculate().unwrap();
+
+        assert_eq!(ds.total_budget_left, 1325.075);
+        assert_eq!(ds.total_income, 4000.00);
+        assert_eq!(ds.total_reccuring_expenses, 1746.905);
+        assert_eq!(ds.total_budget_spent, 928.02);
     }
 }
