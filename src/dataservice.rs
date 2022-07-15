@@ -27,7 +27,7 @@ impl DataService {
     pub fn new() -> Self {
         let mut data_service = DataService::default();
         data_service.load_data().expect("Issue loading data");
-        data_service.calc_overview().expect("Issue calculating");
+        data_service.calculate().expect("Issue calculating");
         data_service
     }
 
@@ -122,7 +122,7 @@ impl DataService {
         Ok(categorie_map)
     }
 
-    pub fn calc_overview(&mut self) -> Result<()> {
+    pub fn calculate(&mut self) -> Result<()> {
         let recurring_expense_bookings = self.get_recurring(BookingType::Expense)?;
         let budget_bookings = self.get_bookings(BookingType::Expense)?;
         let budget_bookins_income = self.get_bookings(BookingType::Income)?;
@@ -177,7 +177,7 @@ mod tests {
                 RecurringType::Monthly,
             ),
         ];
-        ds.calc_overview().unwrap();
+        ds.calculate().unwrap();
 
         assert_eq!(ds.total_budget_left, 5.00);
     }

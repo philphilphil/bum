@@ -142,7 +142,7 @@ fn run_ui<B: Backend>(terminal: &mut Terminal<B>, mut app: UserInterface) -> Res
             }
         }
         app.dataservice.load_data()?;
-        app.dataservice.calc_overview()?;
+        app.dataservice.calculate()?;
     }
 }
 
