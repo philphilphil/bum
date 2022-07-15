@@ -1,4 +1,5 @@
 mod budget;
+mod edit;
 mod planning;
 mod settings;
 use crate::dataservice::DataService;
@@ -34,6 +35,7 @@ pub enum UIMode {
     #[default]
     Normal,
     Command,
+    Edit,
 }
 
 pub struct UserInterface<'a> {
@@ -111,6 +113,7 @@ fn run_ui<B: Backend>(terminal: &mut Terminal<B>, mut app: UserInterface) -> Res
                     KeyCode::Char('p') => app.index = 0,
                     KeyCode::Char('b') => app.index = 1,
                     KeyCode::Char('s') => app.index = 2,
+                    KeyCode::Char('e') => app.mode = UIMode::Edit,
                     KeyCode::Char(':') | KeyCode::Char('c') => {
                         app.mode = UIMode::Command;
                         app.error_message = String::new();
@@ -137,6 +140,14 @@ fn run_ui<B: Backend>(terminal: &mut Terminal<B>, mut app: UserInterface) -> Res
                     KeyCode::Backspace => {
                         app.command.pop();
                     }
+                    _ => {}
+                },
+                UIMode::Edit => match key.code {
+                    KeyCode::Esc => {
+                        app.mode = UIMode::Normal;
+                        app.command = String::new();
+                    }
+                    KeyCode::Down => {}
                     _ => {}
                 },
             }
@@ -168,7 +179,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) -> Result<()> {
 
     // Bottom - Overview/Command
     match app.mode {
-        UIMode::Normal => {
+        UIMode::Normal | UIMode::Edit => {
             let bottom: Paragraph = get_overview(app);
             f.render_widget(bottom, chunks[2]);
         }
@@ -183,12 +194,17 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &UserInterface) -> Result<()> {
     let tabs: Tabs = get_tab_menu(app);
     f.render_widget(tabs, chunks[0]);
 
-    // Content
-    match app.index {
-        0 => planning::render(f, chunks[1], app)?,
-        1 => budget::render(f, chunks[1], app)?,
-        2 => settings::render(f, chunks[1], app)?,
-        _ => {}
+    // Edit popup
+    if app.mode == UIMode::Edit {
+        edit::render(f, chunks[1], app)?;
+    } else {
+        // Content
+        match app.index {
+            0 => planning::render(f, chunks[1], app)?,
+            1 => budget::render(f, chunks[1], app)?,
+            2 => settings::render(f, chunks[1], app)?,
+            _ => {}
+        }
     }
     Ok(())
 }
@@ -302,8 +318,8 @@ fn get_command<'a>(app: &'a UserInterface) -> Paragraph<'a> {
     ];
     let input = Paragraph::new(text)
         .style(match app.mode {
-            UIMode::Normal => Style::default(),
             UIMode::Command => Style::default().fg(Color::Yellow),
+            _ => Style::default(),
         })
         .block(
             Block::default()
