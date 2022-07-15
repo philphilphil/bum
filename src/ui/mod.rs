@@ -250,7 +250,7 @@ fn get_overview<'a>(app: &'a UserInterface) -> Paragraph<'a> {
         Span::styled(
             format!(
                 "  Expenses: {:.2} {}",
-                app.dataservice.total_expenses, *CURRENCY_SYMBOL
+                app.dataservice.total_reccuring_expenses, *CURRENCY_SYMBOL
             ),
             Style::default().fg(Color::LightRed),
         ),

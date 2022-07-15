@@ -14,7 +14,7 @@ pub struct CategorySum {
 #[derive(Default)]
 pub struct DataService {
     pub total_income: f32,
-    pub total_expenses: f32,
+    pub total_reccuring_expenses: f32,
     pub total_budget_spent: f32,
     pub total_budget_left: f32,
     recurring_bookings: Vec<RecurringBooking>,
@@ -81,7 +81,7 @@ impl DataService {
 
         let expenses = CategorySum {
             name: "Period Expenses".to_string(),
-            amount: self.total_expenses * -1.0,
+            amount: self.total_reccuring_expenses * -1.0,
         };
         result.push(expenses);
 
@@ -139,7 +139,7 @@ impl DataService {
         let budget_income: f32 = budget_bookins_income.iter().map(|b| b.amount).sum();
 
         self.total_income = income;
-        self.total_expenses = yearly + monthly;
+        self.total_reccuring_expenses = yearly + monthly;
         self.total_budget_left = income - (monthly + yearly + budget_spent - budget_income);
         self.total_budget_spent = budget_spent - budget_income;
 
@@ -171,6 +171,13 @@ mod tests {
             ),
             RecurringBooking::new(
                 "Ti",
+                BookingType::Expense,
+                "tt",
+                12.00,
+                RecurringType::Yearly,
+            ),
+            RecurringBooking::new(
+                "Ti",
                 BookingType::Income,
                 "tt",
                 10.00,
@@ -179,6 +186,9 @@ mod tests {
         ];
         ds.calculate().unwrap();
 
-        assert_eq!(ds.total_budget_left, 5.00);
+        assert_eq!(ds.total_budget_left, 4.00);
+        assert_eq!(ds.total_income, 10.00);
+        assert_eq!(ds.total_reccuring_expenses, 2.00);
+        assert_eq!(ds.total_budget_spent, 4.00);
     }
 }
