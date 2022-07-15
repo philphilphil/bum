@@ -81,8 +81,8 @@ impl DataService {
         }
 
         let expenses = CategorySum {
-            name: "Period Expenses".to_string(),
-            amount: self.total_reccuring_expenses * -1.0,
+            name: "Budget Expenses".to_string(),
+            amount: self.total_budget_spent * -1.0,
         };
         result.push(expenses);
 
@@ -219,5 +219,25 @@ mod tests {
         assert_eq!(ds.total_income, 4000.00);
         assert_eq!(ds.total_reccuring_expenses, 1746.905);
         assert_eq!(ds.total_budget_spent, 928.02);
+    }
+
+    #[test]
+    fn test_categories() {
+        let mut ds = DataService::default();
+        let categories = vec![
+            Category::new("Cat A", "a"),
+            Category::new("b", "b"),
+            Category::new("c", "c"),
+            Category::new("Cat D", "dd"),
+            Category::new("e", "e"),
+            Category::new("f", "ff"),
+        ];
+        ds.categories = categories;
+        let map = ds.get_categorie_map().unwrap();
+
+        assert_eq!(map.get("a").unwrap(), "Cat A");
+        assert_eq!(map.get("dd").unwrap(), "Cat D");
+        assert_eq!(map.get("ff").unwrap(), "f");
+        assert_eq!(map.get("g"), None);
     }
 }
