@@ -6,24 +6,24 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Serialize, Debug, Deserialize, PartialEq)]
-pub enum EntryType {
+pub enum BookingType {
     #[default]
     Income,
     Expense,
 }
 
 #[derive(Serialize, Debug, Deserialize)]
-pub struct BookEntry {
+pub struct BudgetBooking {
     pub name: String,
-    pub kind: EntryType,
+    pub kind: BookingType,
     pub category_token: String,
     pub amount: f32,
     #[serde(with = "ts_seconds")]
     pub date: DateTime<Utc>,
 }
 
-impl BookEntry {
-    pub fn new(name: &str, kind: EntryType, category_token: &str, amount: f32) -> Self {
+impl BudgetBooking {
+    pub fn new(name: &str, kind: BookingType, category_token: &str, amount: f32) -> Self {
         Self {
             name: name.to_string(),
             kind,
@@ -51,9 +51,9 @@ impl Display for RecurringType {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct RecurringEntry {
+pub struct RecurringBooking {
     pub name: String,
-    pub kind: EntryType,
+    pub kind: BookingType,
     pub category_token: String,
     pub amount: f32,
     pub rate_type: RecurringType,
@@ -61,10 +61,10 @@ pub struct RecurringEntry {
     // pub next_payment_date: DateTime<Utc>,
 }
 
-impl RecurringEntry {
+impl RecurringBooking {
     pub fn new(
         name: &str,
-        kind: EntryType,
+        kind: BookingType,
         category_token: &str,
         amount: f32,
         rate_type: RecurringType,

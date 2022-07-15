@@ -4,7 +4,7 @@ use std::{
     path::Path,
 };
 
-use crate::model::{BookEntry, Category, RecurringEntry, Setting};
+use crate::model::{BudgetBooking, Category, RecurringBooking, Setting};
 
 // TODO: Add a default path and option to set a path to db files via cli arg
 const DB_BASEPATH: &str = "db/";
@@ -15,22 +15,22 @@ const DB_FILE_BOOKINGS: &str = "data_bookings.json";
 const DB_FILE_BOOKINGS_ARCHIVE: &str = "data_bookings_archive.json";
 const DB_FILE_RECURRING: &str = "data_recurring.json";
 
-pub fn get_expenses() -> Result<Vec<BookEntry>> {
-    let b: Vec<BookEntry> =
+pub fn get_expenses() -> Result<Vec<BudgetBooking>> {
+    let b: Vec<BudgetBooking> =
         serde_json::from_reader(&File::open(Path::new(DB_BASEPATH).join(DB_FILE_BOOKINGS))?)?;
     Ok(b)
 }
 
-pub fn get_expenses_archive() -> Result<Vec<BookEntry>> {
-    let b: Vec<BookEntry> = serde_json::from_reader(&File::open(
+pub fn get_expenses_archive() -> Result<Vec<BudgetBooking>> {
+    let b: Vec<BudgetBooking> = serde_json::from_reader(&File::open(
         Path::new(DB_BASEPATH).join(DB_FILE_BOOKINGS_ARCHIVE),
     )?)?;
     Ok(b)
 }
 
-pub fn add_expense(booking: BookEntry) -> Result<()> {
+pub fn add_expense(booking: BudgetBooking) -> Result<()> {
     let book_path = Path::new(DB_BASEPATH).join(DB_FILE_BOOKINGS);
-    let mut b: Vec<BookEntry> = serde_json::from_reader(&File::open(&book_path)?)?;
+    let mut b: Vec<BudgetBooking> = serde_json::from_reader(&File::open(&book_path)?)?;
     b.push(booking);
     serde_json::to_writer_pretty(&File::create(&book_path)?, &b)?;
     Ok(())
@@ -75,15 +75,15 @@ pub fn add_category(cat: Category) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn get_recurring() -> Result<Vec<RecurringEntry>> {
-    let r: Vec<RecurringEntry> =
+pub(crate) fn get_recurring() -> Result<Vec<RecurringBooking>> {
+    let r: Vec<RecurringBooking> =
         serde_json::from_reader(&File::open(Path::new(DB_BASEPATH).join(DB_FILE_RECURRING))?)?;
     Ok(r)
 }
 
-pub fn add_recurring(rec: RecurringEntry) -> Result<()> {
+pub fn add_recurring(rec: RecurringBooking) -> Result<()> {
     let rec_path = Path::new(DB_BASEPATH).join(DB_FILE_RECURRING);
-    let mut recurrings: Vec<RecurringEntry> = serde_json::from_reader(&File::open(&rec_path)?)?;
+    let mut recurrings: Vec<RecurringBooking> = serde_json::from_reader(&File::open(&rec_path)?)?;
     recurrings.push(rec);
     serde_json::to_writer_pretty(&File::create(&rec_path)?, &recurrings)?;
     Ok(())

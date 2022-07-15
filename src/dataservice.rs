@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     db,
-    model::{BookEntry, Category, EntryType, RecurringEntry, RecurringType},
+    model::{BookingType, BudgetBooking, Category, RecurringBooking, RecurringType},
 };
 use anyhow::Result;
 
@@ -17,30 +17,31 @@ pub struct DataService {
     pub total_expenses: f32,
     pub total_budget_spent: f32,
     pub total_budget_left: f32,
-    recurring_entries: Vec<RecurringEntry>,
-    budget_entries: Vec<BookEntry>,
-    budget_entries_archive: Vec<BookEntry>,
+    recurring_bookings: Vec<RecurringBooking>,
+    budget_bookings: Vec<BudgetBooking>,
+    budget_bookings_archive: Vec<BudgetBooking>,
     categories: Vec<Category>,
 }
 
 impl DataService {
     pub fn new() -> Self {
         let mut data_service = DataService::default();
-        data_service.reload_data();
+        data_service.load_data().expect("Issue loading data");
+        data_service.calc_overview().expect("Issue calculating");
         data_service
     }
 
-    pub fn reload_data(&mut self) {
-        self.recurring_entries = db::get_recurring().unwrap();
-        self.budget_entries = db::get_expenses().unwrap();
-        self.categories = db::get_categories().unwrap();
-        self.calc_overview().unwrap();
+    pub fn load_data(&mut self) -> Result<()> {
+        self.recurring_bookings = db::get_recurring()?;
+        self.budget_bookings = db::get_expenses()?;
+        self.categories = db::get_categories()?;
+        Ok(())
     }
 
-    pub fn calculate_categorie_sums(&self) -> Result<Vec<CategorySum>> {
+    pub fn calculate_reccuring_categorie_sums(&self) -> Result<Vec<CategorySum>> {
         let mut result = vec![];
         let mut categories: Vec<String> = self
-            .recurring_entries
+            .recurring_bookings
             .iter()
             .map(|c| c.category_token.to_string())
             .collect();
@@ -48,8 +49,8 @@ impl DataService {
         categories.dedup();
 
         for cat in categories {
-            let rec: Vec<&RecurringEntry> = self
-                .recurring_entries
+            let rec: Vec<&RecurringBooking> = self
+                .recurring_bookings
                 .iter()
                 .filter(|c| c.category_token == cat)
                 .collect();
@@ -68,7 +69,7 @@ impl DataService {
 
             let mut sum = monthly_sum + (yearly_sum / 12.0);
 
-            if rec.first().unwrap().kind == EntryType::Expense {
+            if rec.first().unwrap().kind == BookingType::Expense {
                 sum *= -1.0;
             }
 
@@ -87,21 +88,30 @@ impl DataService {
         Ok(result)
     }
 
-    pub fn get_recurring(&self, kind: EntryType) -> Result<Vec<&RecurringEntry>> {
+    pub fn get_recurring(&self, kind: BookingType) -> Result<Vec<&RecurringBooking>> {
         let recurring = self
-            .recurring_entries
+            .recurring_bookings
             .iter()
             .filter(|c| c.kind == kind)
             .collect();
         Ok(recurring)
     }
 
-    pub fn get_bookings(&self) -> Result<&Vec<BookEntry>> {
-        Ok(&self.budget_entries)
+    pub fn get_all_bookings(&self) -> Result<&Vec<BudgetBooking>> {
+        Ok(&self.budget_bookings)
     }
 
-    pub fn get_bookings_archive(&self) -> Result<&Vec<BookEntry>> {
-        Ok(&self.budget_entries_archive)
+    pub fn get_bookings(&self, kind: BookingType) -> Result<Vec<&BudgetBooking>> {
+        let bookings = self
+            .budget_bookings
+            .iter()
+            .filter(|i| i.kind == kind)
+            .collect();
+        Ok(bookings)
+    }
+
+    pub fn get_bookings_archive(&self) -> Result<&Vec<BudgetBooking>> {
+        Ok(&self.budget_bookings_archive)
     }
 
     pub fn get_categorie_map(&self) -> Result<HashMap<String, String>> {
@@ -112,25 +122,26 @@ impl DataService {
         Ok(categorie_map)
     }
 
-    fn calc_overview(&mut self) -> Result<()> {
-        let recurring_expense_entries = self.get_recurring(EntryType::Expense)?;
-        let (monthly_entries, yearly_entries): (Vec<&RecurringEntry>, Vec<&RecurringEntry>) =
-            recurring_expense_entries
+    pub fn calc_overview(&mut self) -> Result<()> {
+        let recurring_expense_bookings = self.get_recurring(BookingType::Expense)?;
+        let budget_bookings = self.get_bookings(BookingType::Expense)?;
+        let budget_bookins_income = self.get_bookings(BookingType::Income)?;
+        let (monthly_bookings, yearly_bookings): (Vec<&RecurringBooking>, Vec<&RecurringBooking>) =
+            recurring_expense_bookings
                 .into_iter()
                 .partition(|r| r.rate_type == RecurringType::Monthly);
-        let income_entries = self.get_recurring(EntryType::Income)?;
+        let income_bookings = self.get_recurring(BookingType::Income)?;
 
-        let income = income_entries.iter().map(|i| i.amount).sum();
-        let monthly: f32 = monthly_entries.iter().map(|i| i.amount).sum();
-        let yearly: f32 = yearly_entries.iter().map(|i| i.amount).sum::<f32>() / 12.0;
-        let budget_spent = self.budget_entries.iter().map(|i| i.amount).sum();
-
-        // FIXME: add calc of bookentry income
+        let income = income_bookings.iter().map(|i| i.amount).sum();
+        let monthly: f32 = monthly_bookings.iter().map(|i| i.amount).sum();
+        let yearly: f32 = yearly_bookings.iter().map(|i| i.amount).sum::<f32>() / 12.0;
+        let budget_spent: f32 = budget_bookings.iter().map(|b| b.amount).sum();
+        let budget_income: f32 = budget_bookins_income.iter().map(|b| b.amount).sum();
 
         self.total_income = income;
         self.total_expenses = yearly + monthly;
-        self.total_budget_left = income - (monthly + yearly + budget_spent);
-        self.total_budget_spent = budget_spent;
+        self.total_budget_left = income - (monthly + yearly + budget_spent - budget_income);
+        self.total_budget_spent = budget_spent - budget_income;
 
         Ok(())
     }
@@ -143,16 +154,28 @@ mod tests {
     #[test]
     fn test_simple_calculation() {
         let mut ds = DataService::default();
-        ds.budget_entries = vec![
-            BookEntry::new("T", EntryType::Expense, "tt", 2.00),
-            BookEntry::new("T", EntryType::Expense, "tt", 1.00),
-            BookEntry::new("T", EntryType::Expense, "tt", 1.00),
-            BookEntry::new("T", EntryType::Expense, "tt", 3.00),
-            BookEntry::new("T", EntryType::Income, "tt", 3.00),
+        ds.budget_bookings = vec![
+            BudgetBooking::new("T", BookingType::Expense, "tt", 2.00),
+            BudgetBooking::new("T", BookingType::Expense, "tt", 1.00),
+            BudgetBooking::new("T", BookingType::Expense, "tt", 1.00),
+            BudgetBooking::new("T", BookingType::Expense, "tt", 3.00),
+            BudgetBooking::new("T", BookingType::Income, "tt", 3.00),
         ];
-        ds.recurring_entries = vec![
-            RecurringEntry::new("Ti", EntryType::Expense, "tt", 1.00, RecurringType::Monthly),
-            RecurringEntry::new("Ti", EntryType::Income, "tt", 10.00, RecurringType::Monthly),
+        ds.recurring_bookings = vec![
+            RecurringBooking::new(
+                "Ti",
+                BookingType::Expense,
+                "tt",
+                1.00,
+                RecurringType::Monthly,
+            ),
+            RecurringBooking::new(
+                "Ti",
+                BookingType::Income,
+                "tt",
+                10.00,
+                RecurringType::Monthly,
+            ),
         ];
         ds.calc_overview().unwrap();
 

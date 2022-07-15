@@ -2,7 +2,7 @@ use anyhow::*;
 
 use crate::{
     db,
-    model::{BookEntry, Category, EntryType, RecurringEntry, RecurringType},
+    model::{BookingType, BudgetBooking, Category, RecurringBooking, RecurringType},
 };
 
 // TODO:
@@ -18,18 +18,18 @@ pub fn handle_command(cmd: &str) -> Result<()> {
 
     match action[0] {
         "ae" => {
-            let exp = BookEntry::new(
+            let exp = BudgetBooking::new(
                 action[1],
-                EntryType::Expense,
+                BookingType::Expense,
                 action[2],
                 action[3].parse::<f32>().unwrap(),
             );
             db::add_expense(exp)?;
         }
         "ari" => {
-            let rec = RecurringEntry::new(
+            let rec = RecurringBooking::new(
                 action[1],
-                EntryType::Income,
+                BookingType::Income,
                 action[2],
                 action[3].parse::<f32>().unwrap(),
                 rec_type,
@@ -38,9 +38,9 @@ pub fn handle_command(cmd: &str) -> Result<()> {
         }
 
         "are" => {
-            let rec = RecurringEntry::new(
+            let rec = RecurringBooking::new(
                 action[1],
-                EntryType::Expense,
+                BookingType::Expense,
                 action[2],
                 action[3].parse::<f32>().unwrap(),
                 rec_type,

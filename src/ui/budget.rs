@@ -1,4 +1,4 @@
-use crate::model::BookEntry;
+use crate::model::BudgetBooking;
 use crate::ui::CURRENCY_SYMBOL;
 use anyhow::Result;
 use tui::layout::{Layout, Rect};
@@ -17,7 +17,7 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect, app: &UserInterface) ->
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
         .split(chunk);
 
-    let bookings = app.dataservice.get_bookings().unwrap();
+    let bookings = app.dataservice.get_all_bookings().unwrap();
     let table = render_budget(bookings);
 
     let booking_archive = app.dataservice.get_bookings_archive().unwrap();
@@ -28,7 +28,7 @@ pub fn render<B: Backend>(f: &mut Frame<B>, chunk: Rect, app: &UserInterface) ->
     Ok(())
 }
 
-fn render_budget<'a>(items: &[BookEntry]) -> Table<'a> {
+fn render_budget<'a>(items: &[BudgetBooking]) -> Table<'a> {
     // active
     let items: Vec<_> = items
         .iter()
